@@ -36,7 +36,13 @@ def graph_data():
     cursor = conn.cursor()
 
     # Retrieve data from the PostgreSQL server and aggregate by hour
-    cursor.execute("SELECT date_trunc('hour', stamp), count(*) FROM log_service_requests WHERE stamp >= NOW() - INTERVAL '24 hours' GROUP BY 1")
+    #cursor.execute("SELECT date_trunc('hour', stamp), count(*) FROM log_service_requests WHERE stamp >= NOW() - INTERVAL '24 hours' GROUP BY 1")
+    cursor.execute(
+        "SELECT date_trunc('hour', lsr.stamp), COUNT(*) "
+        "FROM log_service_requests AS lsr "
+        "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
+        "WHERE lsr.stamp >= NOW() - INTERVAL '24 hours' "
+        "GROUP BY date_trunc('hour', lsr.stamp)")
     results = cursor.fetchall()
 
     # Extract timestamps and values from the results
@@ -89,7 +95,14 @@ def minute_breakdown(timestamp):
     end_timestamp = start_timestamp + timedelta(hours=1)
 
     # Retrieve data from the PostgreSQL server for the specified hour
-    cursor.execute("SELECT date_trunc('minute', stamp) as minute, count(*) FROM log_service_requests WHERE stamp >= %s AND stamp < %s GROUP BY 1", (start_timestamp, end_timestamp))
+    #cursor.execute("SELECT date_trunc('minute', stamp) as minute, count(*) FROM log_service_requests WHERE stamp >= %s AND stamp < %s GROUP BY 1", (start_timestamp, end_timestamp))
+    cursor.execute(
+        "SELECT date_trunc('minute', lsr.stamp) as minute, COUNT(*) "
+        "FROM log_service_requests AS lsr "
+        "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
+        "WHERE lsr.stamp >= %s and lsr.stamp < %s "
+        "GROUP BY 1", (start_timestamp, end_timestamp))
+
     results = cursor.fetchall()
 
     # Extract timestamps and values from the results

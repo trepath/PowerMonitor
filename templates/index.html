@@ -6,6 +6,7 @@
 </head>
 <body>
     <div id="bar-graph"></div>
+    <button id="back-button">Back</button>
 
     <script>
         // Function to load the initial bar graph data
@@ -13,13 +14,11 @@
             fetch('/graph_data')
                 .then(response => response.json())
                 .then(data => {
-                    console.log('Response:', data); // Debug statement
                     var parsedData = JSON.parse(data);
-                    console.log('Parsed Data:', parsedData); // Debug statement
                     Plotly.newPlot('bar-graph', parsedData.data, parsedData.layout)
-                    .then(function(gd) {
-                        gd.on('plotly_click', handleBarClick);
-                    });
+                        .then(function(gd) {
+                            gd.on('plotly_click', handleBarClick);
+                        });
                 });
         }
 
@@ -28,25 +27,32 @@
             if (event && event.points) {
                 var timestamp = event.points[0].x;
                 var encodedTimestamp = encodeURIComponent(timestamp);
-                console.log('Encoded Timestamp:', encodedTimestamp); // Debug statement
 
                 fetch('/graph_data/' + encodedTimestamp)
                     .then(response => response.json())
                     .then(data => {
-                        console.log('Response:', data); // Debug statement
-
                         var parsedData = JSON.parse(data);
-                        console.log('Parsed Data:', parsedData); // Debug statement
-
-                        Plotly.newPlot('bar-graph', parsedData.data, parsedData.layout);
+                        Plotly.newPlot('bar-graph', parsedData.data, parsedData.layout)
+                            .then(function(gd) {
+                                gd.on('plotly_click', handleBarClick);
+                            });
                     });
             }
         }
 
-        // Load the initial bar graph
+        // Function to handle back button click event
+        function handleBackButtonClick() {
+            loadBarGraph();
+        }
+
+        // Load the initial bar graph and attach event handlers
         document.addEventListener('DOMContentLoaded', function() {
             loadBarGraph();
-        });  // This line was missing in your code
+
+            // Attach the click event handler to the back button
+            var backButton = document.getElementById('back-button');
+            backButton.addEventListener('click', handleBackButtonClick);
+        });
     </script>
 </body>
 </html>
