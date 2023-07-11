@@ -60,6 +60,8 @@ def graph_data():
     # Convert the figure to JSON and return the data
     return jsonify(fig.to_json())
 
+from datetime import datetime, timedelta
+
 @app.route('/graph_data/<timestamp>')
 def minute_breakdown(timestamp):
     # Connect to the PostgreSQL server
@@ -73,12 +75,21 @@ def minute_breakdown(timestamp):
     # Create a cursor to execute queries
     cursor = conn.cursor()
 
+    # Trim any leading or trailing spaces
+    timestamp = timestamp.strip()
+
+    # Print the timestamp for verification
+    print(timestamp)
+
+    # Convert the timestamp string to a datetime object
+    timestamp_datetime = datetime.strptime(timestamp, "%Y-%m-%d %H:%M")
+
     # Calculate the start and end timestamps for the selected hour
-    start_timestamp = timestamp
-    end_timestamp = start_timestamp + time.timedelta(hours=1)
+    start_timestamp = timestamp_datetime
+    end_timestamp = start_timestamp + timedelta(hours=1)
 
     # Retrieve data from the PostgreSQL server for the specified hour
-    cursor.execute("SELECT stamp, count(*) FROM log_service_requests WHERE stamp >= %s AND stamp < %s GROUP BY 1", (start_timestamp, end_timestamp))
+    cursor.execute("SELECT date_trunc('minute', stamp) as minute, count(*) FROM log_service_requests WHERE stamp >= %s AND stamp < %s GROUP BY 1", (start_timestamp, end_timestamp))
     results = cursor.fetchall()
 
     # Extract timestamps and values from the results
@@ -101,6 +112,7 @@ def minute_breakdown(timestamp):
 
     # Convert the figure to JSON and return the data
     return jsonify(fig.to_json())
+
 
 if __name__ == '__main__':
     app.run(debug=True)
