@@ -14,6 +14,7 @@
             fetch('/graph_data')
                 .then(response => response.json())
                 .then(data => {
+                    console.log(data);
                     var parsedData = JSON.parse(data);
                     Plotly.newPlot('bar-graph', parsedData.data, parsedData.layout)
                         .then(function(gd) {
