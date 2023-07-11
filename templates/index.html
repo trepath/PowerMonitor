@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PowerMonitor</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <div id="bar-graph"></div>
+
+    <script>
+        // Function to load the initial bar graph data
+        function loadBarGraph() {
+            fetch('/graph_data')
+                .then(response => response.json())
+                .then(data => {
+                    var parsedData = JSON.parse(data);
+                    Plotly.newPlot('bar-graph', parsedData.data, parsedData.layout);
+                });
+        }
+
+        // Function to handle bar click events and load the per-minute breakdown graph
+        function handleBarClick(event) {
+            if (event && event.points) {
+                var timestamp = event.points[0].x;
+                fetch('/graph_data/' + timestamp)
+                    .then(response => response.json())
+                    .then(data => {
+                        var parsedData = JSON.parse(data);
+                        Plotly.newPlot('bar-graph', parsedData.data, parsedData.layout);
+                    });
+            }
+        }
+
+        // Load the initial bar graph and attach the click event handler
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBarGraph();
+
+            // Attach the click event handler to the bar graph
+            var barGraph = document.getElementById('bar-graph');
+            barGraph.on('plotly_click', handleBarClick);
+        });
+    </script>
+</body>
+</html>
