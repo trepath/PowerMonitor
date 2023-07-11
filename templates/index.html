@@ -5,55 +5,60 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
-    <div id="bar-graph"></div>
-    <button id="back-button">Back</button>
+<div id="bar-graph"></div>
+<button id="back-button">Back</button>
 
-    <script>
+<script>
         // Function to load the initial bar graph data
-        function loadBarGraph() {
-            fetch('/graph_data')
-                .then(response => response.json())
-                .then(data => {
-                    console.log(data);
-                    var parsedData = JSON.parse(data);
-                    Plotly.newPlot('bar-graph', parsedData.data, parsedData.layout)
-                        .then(function(gd) {
-                            gd.on('plotly_click', handleBarClick);
-                        });
-                });
-        }
+        var isViewingDetailedData = false;
 
-        // Function to handle bar click events and load the per-minute breakdown graph
-        function handleBarClick(event) {
-            if (event && event.points) {
-                var timestamp = event.points[0].x;
-                var encodedTimestamp = encodeURIComponent(timestamp);
-
-                fetch('/graph_data/' + encodedTimestamp)
-                    .then(response => response.json())
-                    .then(data => {
-                        var parsedData = JSON.parse(data);
-                        Plotly.newPlot('bar-graph', parsedData.data, parsedData.layout)
-                            .then(function(gd) {
-                                gd.on('plotly_click', handleBarClick);
-                            });
+function loadBarGraph() {
+    if (!isViewingDetailedData) {
+        fetch('/graph_data')
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                var parsedData = JSON.parse(data);
+                Plotly.newPlot('bar-graph', parsedData.data, parsedData.layout)
+                    .then(function(gd) {
+                        gd.on('plotly_click', handleBarClick);
                     });
-            }
-        }
+            });
+    }
+    setTimeout(loadBarGraph, 30000);  // Call this function again after 30 seconds
+}
 
-        // Function to handle back button click event
-        function handleBackButtonClick() {
-            loadBarGraph();
-        }
+function handleBarClick(event) {
+    if (event && event.points) {
+        var timestamp = event.points[0].x;
+        var encodedTimestamp = encodeURIComponent(timestamp);
 
-        // Load the initial bar graph and attach event handlers
-        document.addEventListener('DOMContentLoaded', function() {
-            loadBarGraph();
+        isViewingDetailedData = true;
 
-            // Attach the click event handler to the back button
-            var backButton = document.getElementById('back-button');
-            backButton.addEventListener('click', handleBackButtonClick);
-        });
-    </script>
+        fetch('/graph_data/' + encodedTimestamp)
+            .then(response => response.json())
+            .then(data => {
+                var parsedData = JSON.parse(data);
+                Plotly.newPlot('bar-graph', parsedData.data, parsedData.layout)
+                    .then(function(gd) {
+                        gd.on('plotly_click', handleBarClick);
+                    });
+            });
+    }
+}
+
+function handleBackButtonClick() {
+    isViewingDetailedData = false;
+    loadBarGraph();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadBarGraph();
+
+    var backButton = document.getElementById('back-button');
+    backButton.addEventListener('click', handleBackButtonClick);
+});
+
+</script>
 </body>
 </html>

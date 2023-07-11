@@ -1,9 +1,12 @@
 import configparser
 import os
 import time
+
 import psycopg2
 import plotly.graph_objects as go
 from flask import Flask, render_template, jsonify
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # Read the configuration file
 config = configparser.ConfigParser()
@@ -19,9 +22,12 @@ DB_PASS = config['PostgreSQL']['DB_PASS']
 status_colors = {
     0: 'rgb(200, 200, 200)',
     1: 'rgb(100, 200, 100)',
-    500: 'rgb(200, 64, 64)',
+    500: 'rgb(100, 100, 100)',
     504: 'rgb(255, 128, 128)',
-    403: 'rgb(255, 128, 0)'
+    403: 'rgb(255, 128, 0)',
+    6: 'rgb(255, 0, 0)',
+    2: 'rgb(255, 0, 0)',
+    400: 'rgb(0, 0, 255)'
     # Add more as needed
 }
 status_labels = {
@@ -29,19 +35,46 @@ status_labels = {
     1: 'Success',
     500: 'Insurer Service Error',
     504: 'Timeout',
-    403: 'Authentication Error'
+    403: 'Authentication Error',
+    6: 'Critical Error',
+    2: 'Critical Error WAWA',
+    400: 'Broker Error'
     # Add more as needed
 }
 
+# Define a cache to store the graph data
+cache = {
+    'graph_data': {
+        'timestamp': None,
+        'data': None,
+    },
+    'minute_breakdown': {
+        'request': None,  # The request object for the current request
+        'timestamp': None,
+        'data': None,
+    },
+}
+
+
 # Create Flask web server
 app = Flask(__name__)
+
+# Initialize Flask Limiter
+limiter = Limiter(
+    app,
+    default_limits=["200 per day", "50 per hour"]  # Limit each client to 200 requests per day and 50 requests per hour
+)
 
 @app.route('/')
 def home():
     return render_template('index.html')
 
 @app.route('/graph_data')
+@limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
 def graph_data():
+    if cache['graph_data']['timestamp'] and time.time() - cache['graph_data']['timestamp'] < 60:
+        return cache['graph_data']['data']
+
     # Connect to the PostgreSQL server
     conn = psycopg2.connect(
         host=DB_HOST,
@@ -87,10 +120,14 @@ def graph_data():
     # Configure the layout of the bar graph
     fig.update_layout(
         barmode='stack',
-        title='Total SR Numbers per Hour',
+        title='Total Online Requests per Hour',
         xaxis_title='Hour',
-        yaxis_title='Total SR Numbers'
+        yaxis_title='Total Requests'
     )
+
+    cache['graph_data']['timestamp'] = time.time()
+    cache['graph_data']['data'] = jsonify(fig.to_json())
+    return cache['graph_data']['data']
 
     # Convert the figure to JSON and return the data
     return jsonify(fig.to_json())
@@ -98,8 +135,12 @@ def graph_data():
 from datetime import datetime, timedelta
 
 @app.route('/graph_data/<timestamp>')
-@app.route('/graph_data/<timestamp>')
+@limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
 def minute_breakdown(timestamp):
+    # And for /graph_data/<timestamp>
+    if cache['minute_breakdown']['timestamp'] and time.time() - cache['minute_breakdown']['timestamp'] < 60:
+        return cache['minute_breakdown']['data']
+
     # Connect to the PostgreSQL server
     conn = psycopg2.connect(
         host=DB_HOST,
@@ -159,10 +200,14 @@ def minute_breakdown(timestamp):
     # Configure the layout of the per-minute breakdown graph
     fig.update_layout(
         barmode='stack',
-        title='SR Numbers Breakdown for Hour: {}'.format(timestamp),
+        title='Online Rating Request per Minute: {}'.format(timestamp),
         xaxis_title='Timestamp',
-        yaxis_title='SR Numbers'
+        yaxis_title='Total Number'
     )
+
+    # And for /graph_data/<timestamp>
+    cache['minute_breakdown']['timestamp'] = time.time()
+    cache['minute_breakdown']['data'] = jsonify(fig.to_json())
 
     # Convert the figure to JSON and return the data
     return jsonify(fig.to_json())
