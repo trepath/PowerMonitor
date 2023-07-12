@@ -49,6 +49,15 @@ function handleBarClick(event) {
                 .then(response => response.json())
                 .then(data => {
                     console.log(data);
+                    var minuteDetailList = document.getElementById('minute-detail-list');
+                    minuteDetailList.innerHTML = ''; // Clear previous content
+
+                    // Iterate over the data and create HTML elements
+                    data.forEach(item => {
+                        var listItem = document.createElement('li');
+                        listItem.textContent = `${item.insurer}, Status: ${item.status}`;
+                        minuteDetailList.appendChild(listItem);
+                    });
                 });
         }else{
             isViewingDetailedData = true;
@@ -68,6 +77,9 @@ function handleBarClick(event) {
 function handleBackButtonClick() {
     isViewingDetailedData = false;
     loadBarGraph();
+
+    var minuteDetailList = document.getElementById('minute-detail-list');
+    minuteDetailList.innerHTML = ''; // Clear the minute detail list
 }
 
 document.addEventListener('DOMContentLoaded', function() {

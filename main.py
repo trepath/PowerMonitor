@@ -255,7 +255,7 @@ def minute_breakdown_details(timestamp, status):
 
     # Retrieve data from the PostgreSQL server for the specified hour and group by minute and status
     cursor.execute(
-        "SELECT date_trunc('minute', lsr.stamp) as minute, lsd.status "
+        "SELECT date_trunc('minute', lsr.stamp) as minute, lsd.status as status, lsd.insurer as insurer, lsd.responsetime as responsetime "
         "FROM log_service_requests AS lsr "
         "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
         "WHERE lsr.stamp >= %s and lsr.stamp < %s and lsd.status = %s",
@@ -265,8 +265,8 @@ def minute_breakdown_details(timestamp, status):
 
     # Convert results to a list of dictionaries
     result_list = []
-    for minute, status in results:
-        result_list.append({'minute': minute, 'status': status})
+    for minute, status, insurer, responsetime in results:
+        result_list.append({'minute': minute, 'status': status, 'insurer': insurer, 'responsetime': responsetime})
 
     # Close the cursor and the connection
     cursor.close()
