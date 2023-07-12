@@ -7,9 +7,9 @@
     .collapsible {
         cursor: pointer;
         list-style: none;
-        padding: 10px;
+        padding: 2px;
         border: 1px solid #ccc;
-        margin-bottom: 10px;
+        margin-bottom: 2px;
     }
 
     .collapsible.active {
@@ -17,7 +17,7 @@
     }
 
     .content {
-        margin-top: 10px;
+        margin-top: 2px;
         overflow: hidden;
         height: 1.6em;
         line-height: 1.6em;
@@ -74,49 +74,76 @@ function handleBarClick(event) {
             console.log(traceIndex);
             console.log(status);
 
-fetch('/graph_data/' + encodedTimestamp + '/' + status)
-    .then(response => response.json())
-    .then(data => {
-        console.log(data);
-        var minuteDetailList = document.getElementById('minute-detail-list');
-        minuteDetailList.innerHTML = ''; // Clear previous content
+            fetch('/graph_data/' + encodedTimestamp + '/' + status)
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    var minuteDetailList = document.getElementById('minute-detail-list');
+                    minuteDetailList.innerHTML = ''; // Clear previous content
 
-        // Iterate over the data and create HTML elements
-        data.forEach(item => {
-            var listItem = document.createElement('li');
-            listItem.classList.add('collapsible'); // Add the 'collapsible' class to the listItem
+                    // Iterate over the data and create HTML elements
+                    data.forEach(item => {
+                        var listItem = document.createElement('li');
+                        listItem.classList.add('collapsible'); // Add the 'collapsible' class to the listItem
 
-            var contentContainer = document.createElement('div');
-            contentContainer.classList.add('content', 'collapsed'); // Add the 'content' and 'collapsed' classes to the contentContainer
+                        var contentContainer = document.createElement('div');
+                        contentContainer.classList.add('content', 'collapsed'); // Add the 'content' and 'collapsed' classes to the contentContainer
 
-            for (const key in item) {
-                var keySpan = document.createElement('span');
-                keySpan.textContent = `${key}: `;
-                contentContainer.appendChild(keySpan);
+                        for (const key in item) {
+                            var keySpan = document.createElement('span');
+                            keySpan.textContent = `${key}: `;
+                            contentContainer.appendChild(keySpan);
 
-                var valueSpan = document.createElement('span');
-                valueSpan.textContent = `${item[key]}`;
-                contentContainer.appendChild(valueSpan);
+                            var valueSpan = document.createElement('span');
+                            valueSpan.textContent = `${item[key]}`;
+                            contentContainer.appendChild(valueSpan);
 
-                contentContainer.appendChild(document.createElement('br')); // Add a line break
-            }
+                            contentContainer.appendChild(document.createElement('br')); // Add a line break
+                        }
 
-            listItem.appendChild(contentContainer);
-            minuteDetailList.appendChild(listItem);
-        });
+                        // Create the button
+                        var button = document.createElement('button');
+                        button.textContent = 'Download File';
+                        button.addEventListener('click', function() {
+                            fetch('/process_file_location', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ responsefile_path: item.responsefile })
+                            })
+                            .then(response => {
+                                if (response.ok) {
+                                    return response.text(); // or response.json() if the response is JSON
+                                } else {
+                                    throw new Error('Request failed with status ' + response.status);
+                                }
+                            })
+                            .then(data => {
+                                console.log('Response:', data); // Log the full response
+                                // Handle the response accordingly
+                            })
+                            .catch(error => {
+                                console.error('An error occurred while processing file location', error);
+                            });
+                        });
 
-        // Add click event listener to each collapsible item
-        var collapsibleItems = document.querySelectorAll('.collapsible');
-        collapsibleItems.forEach(item => {
-            item.addEventListener('click', function() {
-                this.classList.toggle('active'); // Toggle the 'active' class
-            });
-        });
-    });
+                        // Append the button to the content container
+                        contentContainer.appendChild(button);
 
+                        listItem.appendChild(contentContainer);
+                        minuteDetailList.appendChild(listItem);
+                    });
 
-
-        }else{
+                    // Add click event listener to each collapsible item
+                    var collapsibleItems = document.querySelectorAll('.collapsible');
+                    collapsibleItems.forEach(item => {
+                        item.addEventListener('click', function() {
+                            this.classList.toggle('active'); // Toggle the 'active' class
+                        });
+                    });
+                });
+        } else {
             isViewingDetailedData = true;
             fetch('/graph_data/' + encodedTimestamp)
                 .then(response => response.json())
@@ -131,6 +158,7 @@ fetch('/graph_data/' + encodedTimestamp + '/' + status)
     }
 }
 
+
 function handleBackButtonClick() {
     isViewingDetailedData = false;
     loadBarGraph();
@@ -139,12 +167,33 @@ function handleBackButtonClick() {
     minuteDetailList.innerHTML = ''; // Clear the minute detail list
 }
 
+function openFileLocation(filePath) {
+  // Check if the filePath is defined
+  if (!filePath) {
+    console.error('File path is missing.');
+    return;
+  }
+
+  var link = document.createElement('a');
+  link.href = filePath;
+  link.download = '';
+
+  // Trigger a click event on the anchor element
+  var event = document.createEvent('MouseEvents');
+  event.initMouseEvent(
+    'click', true, true, window, 0, 0, 0, 0, 0,
+    false, false, false, false, 0, null
+  );
+  link.dispatchEvent(event);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     loadBarGraph();
 
     var backButton = document.getElementById('back-button');
     backButton.addEventListener('click', handleBackButtonClick);
 });
+
 
 </script>
 </body>

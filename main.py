@@ -4,7 +4,7 @@ import time
 
 import psycopg2
 import plotly.graph_objects as go
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, send_file, request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -64,6 +64,12 @@ limiter = Limiter(
     app,
     default_limits=["200 per day", "50 per hour"]  # Limit each client to 200 requests per day and 50 requests per hour
 )
+
+@app.route('/download', methods=['GET'])
+def download_file():
+    responsefile_path = '/path/to/responsefile.ext'  # Replace with the actual path to your response file
+    return send_file(responsefile_path, as_attachment=True)
+
 
 @app.route('/')
 def home():
@@ -254,7 +260,7 @@ def minute_breakdown_details(timestamp, status):
     status = status_labels_reverse[status]
 
     cursor.execute(
-        "SELECT date_trunc('minute', lsr.stamp) as minute, lsd.status as status, lsd.insurer as insurer, lsd.responsetime as responsetime, "
+        "SELECT date_trunc('minute', lsr.stamp) as minute, lsd.status as status, lsd.insurer as insurer, lsd.responsetime as responsetime, lsd.responsefile as responsefile, "
         "lsr.prov as prov, lsr.quotenumber as quotenumber, lsr.pq_clientid as pq_clientid, b.brokername as brokername "
         "FROM log_service_requests AS lsr "
         "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
@@ -278,6 +284,18 @@ def minute_breakdown_details(timestamp, status):
 
     # Return JSON representation of the result_list
     return jsonify(result_list)
+
+@app.route('/process_file_location', methods=['POST'])
+def process_file_location():
+    data = request.get_json()
+    responsefile_path = data['responsefile_path']
+    # Process the file location and perform the desired action
+    # Remap sv-hv15 to sv-hv15.servepoint.net
+    print(data)
+    responsefile_path = responsefile_path.replace('sv-hv15', 'sv-hv15.servpoint.net')
+    print(responsefile_path)
+    # Return the file for download
+    return send_file(responsefile_path, as_attachment=True)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
