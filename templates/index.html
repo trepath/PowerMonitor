@@ -71,7 +71,18 @@
             border: 1px solid #ccc;
             border-radius: 5px;
         }
+        /* New style for the copy icon */
+        .copy-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+        }
 
+                /* New style for the copy icon */
+        .file-content {
+            position: relative;
+        }
 
     </style>
 </head>
@@ -236,10 +247,20 @@
             .then(data => {
                 console.log('Response:', data); // Log the full response
                 displayFormattedXML(data); // Display the response in the file-content column
+
+    // Add the copy icon to the file-content div
+    var fileContentDiv = document.getElementById('file-content');
+    fileContentDiv.classList.add('file-content');
+    var copyIcon = document.createElement('span');
+    copyIcon.innerHTML = '&#128203;'; // Unicode for clipboard icon (📋)
+    copyIcon.classList.add('copy-icon');
+    copyIcon.addEventListener('click', copyFileContents);
+    fileContentDiv.appendChild(copyIcon);
             })
             .catch(error => {
                 console.error('An error occurred while processing file location', error);
             });
+
         });
 
         return button;
@@ -295,6 +316,7 @@
         document.getElementById(tabId + '-button').classList.add('active');
     }
 
+
     document.addEventListener('DOMContentLoaded', function() {
         loadBarGraph();
 
@@ -304,6 +326,19 @@
         var mainTab = document.getElementById('request-per-hour-button');
         mainTab.addEventListener('click', handleBackButtonClick);
     });
+
+    // Function to copy file contents to clipboard
+    function copyFileContents() {
+        var fileContent = document.getElementById('file-content');
+        var range = document.createRange();
+        range.selectNodeContents(fileContent);
+        var selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        document.execCommand('copy');
+        selection.removeAllRanges();
+    }
+
 </script>
 </body>
 </html>

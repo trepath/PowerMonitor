@@ -27,7 +27,8 @@ status_colors = {
     403: 'rgb(255, 128, 0)',
     6: 'rgb(255, 0, 0)',
     2: 'rgb(255, 0, 0)',
-    400: 'rgb(0, 0, 255)'
+    400: 'rgb(0, 0, 255)',
+    200: 'rgb(0, 128, 128)'
     # Add more as needed
 }
 status_labels = {
@@ -38,7 +39,8 @@ status_labels = {
     403: '403 - Authentication Error',
     6: 'Critical Error',
     2: 'Critical Error WAWA',
-    400: '400 - Broker Error'
+    400: '400 - Broker Error',
+    200: '200 - Success DOC Credit'
     # Add more as needed
 }
 
