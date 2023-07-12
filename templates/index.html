@@ -107,47 +107,19 @@
                             var contentContainer = document.createElement('div');
                             contentContainer.classList.add('content', 'collapsed'); // Add the 'content' and 'collapsed' classes to the contentContainer
 
-                            for (const key in item) {
-                                var keySpan = document.createElement('span');
-                                keySpan.textContent = `${key}: `;
-                                contentContainer.appendChild(keySpan);
+                            createRequestDetails(item, contentContainer);
 
-                                var valueSpan = document.createElement('span');
-                                valueSpan.textContent = `${item[key]}`;
-                                contentContainer.appendChild(valueSpan);
+                            var button1 = createDownloadButton('/process_file_location', 'ServiceRequest', item.sr_requestfile);
+                            var button2 = createDownloadButton('/process_file_location', 'ServiceResponse', item.sr_responsefile);
+                            var button3 = createDownloadButton('/process_file_location', 'Request', item.requestfile);
+                            var button4 = createDownloadButton('/process_file_location', 'Response', item.responsefile);
 
-                                contentContainer.appendChild(document.createElement('br')); // Add a line break
-                            }
-
-                            // Create the button
-                            var button = document.createElement('button');
-                            button.textContent = 'Download File';
-                            button.addEventListener('click', function() {
-                                fetch('/process_file_location', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    body: JSON.stringify({ responsefile_path: item.responsefile })
-                                })
-                                .then(response => {
-                                    if (response.ok) {
-                                        return response.text(); // or response.json() if the response is JSON
-                                    } else {
-                                        throw new Error('Request failed with status ' + response.status);
-                                    }
-                                })
-                                .then(data => {
-                                    console.log('Response:', data); // Log the full response
-                                    displayFormattedXML(data); // Display the response in the file-content column
-                                })
-                                .catch(error => {
-                                    console.error('An error occurred while processing file location', error);
-                                });
-                            });
 
                             // Append the button to the content container
-                            contentContainer.appendChild(button);
+                            contentContainer.appendChild(button1);
+                            contentContainer.appendChild(button2);
+                            contentContainer.appendChild(button3);
+                            contentContainer.appendChild(button4);
 
                             listItem.appendChild(contentContainer);
                             minuteDetailList.appendChild(listItem);
@@ -200,6 +172,72 @@
 
         fileContentColumn.appendChild(pre);
     }
+
+    function createDownloadButton(url, label, responsefile) {
+        var button = document.createElement('button');
+        button.textContent = label;
+                
+          // Disable the button if responsefile is empty or null
+          if (!responsefile) {
+            button.disabled = true;
+          }
+
+        button.addEventListener('click', function() {
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ responsefile_path: responsefile })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.text(); // or response.json() if the response is JSON
+                } else {
+                    throw new Error('Request failed with status ' + response.status);
+                }
+            })
+            .then(data => {
+                console.log('Response:', data); // Log the full response
+                displayFormattedXML(data); // Display the response in the file-content column
+            })
+            .catch(error => {
+                console.error('An error occurred while processing file location', error);
+            });
+        });
+
+        return button;
+    }
+
+    function createRequestDetails(item, contentContainer) {
+      var valueSpan = document.createElement('span');
+      valueSpan.textContent = item['brokername'];
+      contentContainer.appendChild(valueSpan);
+
+      valueSpan = document.createElement('span');
+      valueSpan.textContent = item['pq_clientid'];
+      contentContainer.appendChild(valueSpan);
+
+      contentContainer.appendChild(document.createElement('br')); // Add a line break
+
+      valueSpan = document.createElement('span');
+        var lob_text;
+        if (item['lob'].charAt(0) === '1') {
+          lob_text = 'Auto';
+        } else if (item['lob'].charAt(0) === '2') {
+          lob_text = 'Home';
+        } else {
+          lob_text = 'Credit';
+        }
+
+
+      valueSpan.textContent = item['insurer'] + ' ' + lob_text + ' ' + item['prov'];
+      contentContainer.appendChild(valueSpan);
+
+      contentContainer.appendChild(document.createElement('br')); // Add a line break
+    }
+
+
 
     document.addEventListener('DOMContentLoaded', function() {
         loadBarGraph();
