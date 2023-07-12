@@ -69,6 +69,14 @@ limiter = Limiter(
 def home():
     return render_template('index.html')
 
+
+def reverse_lookup(dictionary, value):
+    for key, val in dictionary.items():
+        if val == value:
+            return key
+    return None
+
+
 @app.route('/graph_data')
 @limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
 def graph_data():
@@ -212,6 +220,60 @@ def minute_breakdown(timestamp):
     # Convert the figure to JSON and return the data
     return jsonify(fig.to_json())
 
+@app.route('/graph_data/<timestamp>/<status>')
+@limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
+def minute_breakdown_details(timestamp, status):
+    # And for /graph_data/<timestamp>
+    #if cache['minute_breakdown_details']['timestamp'] and time.time() - cache['minute_breakdown_details']['timestamp'] < 60:
+    #    return cache['minute_breakdown']['data']
+
+    # Connect to the PostgreSQL server
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS
+    )
+
+    # Create a cursor to execute queries
+    cursor = conn.cursor()
+
+    # Trim any leading or trailing spaces
+    timestamp = timestamp.strip()
+
+    # Convert the timestamp string to a datetime object
+    timestamp_datetime = datetime.strptime(timestamp, "%Y-%m-%d %H:%M")
+
+    # Calculate the start and end timestamps for the selected hour
+    start_timestamp = timestamp_datetime
+    end_timestamp = start_timestamp + timedelta(hours=1)
+
+    #Reverse the status label dictionary
+    status_labels_reverse = {v: k for k, v in status_labels.items()}
+    # Convert the status string to a status code
+    status = status_labels_reverse[status]
+
+    # Retrieve data from the PostgreSQL server for the specified hour and group by minute and status
+    cursor.execute(
+        "SELECT date_trunc('minute', lsr.stamp) as minute, lsd.status "
+        "FROM log_service_requests AS lsr "
+        "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
+        "WHERE lsr.stamp >= %s and lsr.stamp < %s and lsd.status = %s",
+        (start_timestamp, end_timestamp, status))
+
+    results = cursor.fetchall()
+
+    # Convert results to a list of dictionaries
+    result_list = []
+    for minute, status in results:
+        result_list.append({'minute': minute, 'status': status})
+
+    # Close the cursor and the connection
+    cursor.close()
+    conn.close()
+
+    # Return JSON representation of the result_list
+    return jsonify(result_list)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)

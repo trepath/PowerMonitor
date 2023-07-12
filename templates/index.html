@@ -7,7 +7,7 @@
 <body>
 <div id="bar-graph"></div>
 <button id="back-button">Back</button>
-
+<div id="minute-detail-list"></div>
 <script>
         // Function to load the initial bar graph data
         var isViewingDetailedData = false;
@@ -17,15 +17,14 @@ function loadBarGraph() {
         fetch('/graph_data')
             .then(response => response.json())
             .then(data => {
-                console.log(data);
                 var parsedData = JSON.parse(data);
                 Plotly.newPlot('bar-graph', parsedData.data, parsedData.layout)
                     .then(function(gd) {
                         gd.on('plotly_click', handleBarClick);
                     });
             });
+        setTimeout(loadBarGraph, 30000);  // Call this function again after 30 seconds
     }
-    setTimeout(loadBarGraph, 30000);  // Call this function again after 30 seconds
 }
 
 function handleBarClick(event) {
@@ -33,17 +32,36 @@ function handleBarClick(event) {
         var timestamp = event.points[0].x;
         var encodedTimestamp = encodeURIComponent(timestamp);
 
-        isViewingDetailedData = true;
+        var pointNumber = event.points[0].pointNumber;
+        var traceIndex = event.points[0].curveNumber;
 
-        fetch('/graph_data/' + encodedTimestamp)
-            .then(response => response.json())
-            .then(data => {
-                var parsedData = JSON.parse(data);
-                Plotly.newPlot('bar-graph', parsedData.data, parsedData.layout)
-                    .then(function(gd) {
-                        gd.on('plotly_click', handleBarClick);
-                    });
-            });
+        if (isViewingDetailedData) {
+            // Get the Plotly figure
+            var graphDiv = document.getElementById('bar-graph');
+            var data = graphDiv.data;
+
+            // Get the status from the trace name
+            var status = data[traceIndex].name;
+            console.log(traceIndex);
+            console.log(status);
+
+            fetch('/graph_data/' + encodedTimestamp + '/' + status)
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                });
+        }else{
+            isViewingDetailedData = true;
+            fetch('/graph_data/' + encodedTimestamp)
+                .then(response => response.json())
+                .then(data => {
+                    var parsedData = JSON.parse(data);
+                    Plotly.newPlot('bar-graph', parsedData.data, parsedData.layout)
+                        .then(function(gd) {
+                            gd.on('plotly_click', handleBarClick);
+                        });
+                });
+        }
     }
 }
 
