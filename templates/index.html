@@ -3,149 +3,68 @@
 <head>
     <title>PowerMonitor</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<style>
-    .collapsible {
-        cursor: pointer;
-        list-style: none;
-        padding: 2px;
-        border: 1px solid #ccc;
-        margin-bottom: 2px;
-    }
+    <style>
+        .collapsible {
+            cursor: pointer;
+            list-style: none;
+            padding: 2px;
+            border: 1px solid #ccc;
+            margin-bottom: 2px;
+        }
 
-    .collapsible.active {
-        background-color: #f9f9f9;
-    }
+        .collapsible.active {
+            background-color: #f9f9f9;
+        }
 
-    .content {
-        margin-top: 2px;
-        overflow: hidden;
-        height: 1.6em;
-        line-height: 1.6em;
-    }
+        .content {
+            margin-top: 2px;
+            overflow: hidden;
+            height: 1.6em;
+            line-height: 1.6em;
+        }
 
-    .content.collapsed {
-        height: 1.6em;
-    }
+        .content.collapsed {
+            height: 1.6em;
+        }
 
-    .collapsible.active .content {
-        height: auto;
-    }
-</style>
+        .collapsible.active .content {
+            height: auto;
+        }
 
+        .container {
+            display: flex;
+        }
+
+        #minute-detail-list {
+            width: 35%;
+            height: 100vh;
+            overflow-y: scroll;
+            border-right: 1px solid #ccc;
+            padding: 10px;
+        }
+
+        #file-content {
+            width: 65%;
+            height: 100vh;
+            overflow-y: scroll;
+            padding: 10px;
+        }
+    </style>
 </head>
 <body>
 <div id="bar-graph"></div>
 <button id="back-button">Back</button>
-<div id="minute-detail-list"></div>
+<div class="container">
+    <div id="minute-detail-list"></div>
+    <div id="file-content"></div>
+</div>
 <script>
-        // Function to load the initial bar graph data
-        var isViewingDetailedData = false;
+    // Function to load the initial bar graph data
+    var isViewingDetailedData = false;
 
-function loadBarGraph() {
-    if (!isViewingDetailedData) {
-        fetch('/graph_data')
-            .then(response => response.json())
-            .then(data => {
-                var parsedData = JSON.parse(data);
-                Plotly.newPlot('bar-graph', parsedData.data, parsedData.layout)
-                    .then(function(gd) {
-                        gd.on('plotly_click', handleBarClick);
-                    });
-            });
-        setTimeout(loadBarGraph, 30000);  // Call this function again after 30 seconds
-    }
-}
-
-function handleBarClick(event) {
-    if (event && event.points) {
-        var timestamp = event.points[0].x;
-        var encodedTimestamp = encodeURIComponent(timestamp);
-
-        var pointNumber = event.points[0].pointNumber;
-        var traceIndex = event.points[0].curveNumber;
-
-        if (isViewingDetailedData) {
-            // Get the Plotly figure
-            var graphDiv = document.getElementById('bar-graph');
-            var data = graphDiv.data;
-
-            // Get the status from the trace name
-            var status = data[traceIndex].name;
-            console.log(traceIndex);
-            console.log(status);
-
-            fetch('/graph_data/' + encodedTimestamp + '/' + status)
-                .then(response => response.json())
-                .then(data => {
-                    console.log(data);
-                    var minuteDetailList = document.getElementById('minute-detail-list');
-                    minuteDetailList.innerHTML = ''; // Clear previous content
-
-                    // Iterate over the data and create HTML elements
-                    data.forEach(item => {
-                        var listItem = document.createElement('li');
-                        listItem.classList.add('collapsible'); // Add the 'collapsible' class to the listItem
-
-                        var contentContainer = document.createElement('div');
-                        contentContainer.classList.add('content', 'collapsed'); // Add the 'content' and 'collapsed' classes to the contentContainer
-
-                        for (const key in item) {
-                            var keySpan = document.createElement('span');
-                            keySpan.textContent = `${key}: `;
-                            contentContainer.appendChild(keySpan);
-
-                            var valueSpan = document.createElement('span');
-                            valueSpan.textContent = `${item[key]}`;
-                            contentContainer.appendChild(valueSpan);
-
-                            contentContainer.appendChild(document.createElement('br')); // Add a line break
-                        }
-
-                        // Create the button
-                        var button = document.createElement('button');
-                        button.textContent = 'Download File';
-                        button.addEventListener('click', function() {
-                            fetch('/process_file_location', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ responsefile_path: item.responsefile })
-                            })
-                            .then(response => {
-                                if (response.ok) {
-                                    return response.text(); // or response.json() if the response is JSON
-                                } else {
-                                    throw new Error('Request failed with status ' + response.status);
-                                }
-                            })
-                            .then(data => {
-                                console.log('Response:', data); // Log the full response
-                                // Handle the response accordingly
-                            })
-                            .catch(error => {
-                                console.error('An error occurred while processing file location', error);
-                            });
-                        });
-
-                        // Append the button to the content container
-                        contentContainer.appendChild(button);
-
-                        listItem.appendChild(contentContainer);
-                        minuteDetailList.appendChild(listItem);
-                    });
-
-                    // Add click event listener to each collapsible item
-                    var collapsibleItems = document.querySelectorAll('.collapsible');
-                    collapsibleItems.forEach(item => {
-                        item.addEventListener('click', function() {
-                            this.classList.toggle('active'); // Toggle the 'active' class
-                        });
-                    });
-                });
-        } else {
-            isViewingDetailedData = true;
-            fetch('/graph_data/' + encodedTimestamp)
+    function loadBarGraph() {
+        if (!isViewingDetailedData) {
+            fetch('/graph_data')
                 .then(response => response.json())
                 .then(data => {
                     var parsedData = JSON.parse(data);
@@ -154,47 +73,140 @@ function handleBarClick(event) {
                             gd.on('plotly_click', handleBarClick);
                         });
                 });
+            setTimeout(loadBarGraph, 30000);  // Call this function again after 30 seconds
         }
     }
-}
 
+    function handleBarClick(event) {
+        if (event && event.points) {
+            var timestamp = event.points[0].x;
+            var encodedTimestamp = encodeURIComponent(timestamp);
 
-function handleBackButtonClick() {
-    isViewingDetailedData = false;
-    loadBarGraph();
+            var pointNumber = event.points[0].pointNumber;
+            var traceIndex = event.points[0].curveNumber;
 
-    var minuteDetailList = document.getElementById('minute-detail-list');
-    minuteDetailList.innerHTML = ''; // Clear the minute detail list
-}
+            if (isViewingDetailedData) {
+                // Get the Plotly figure
+                var graphDiv = document.getElementById('bar-graph');
+                var data = graphDiv.data;
 
-function openFileLocation(filePath) {
-  // Check if the filePath is defined
-  if (!filePath) {
-    console.error('File path is missing.');
-    return;
-  }
+                // Get the status from the trace name
+                var status = data[traceIndex].name;
 
-  var link = document.createElement('a');
-  link.href = filePath;
-  link.download = '';
+                fetch('/graph_data/' + encodedTimestamp + '/' + status)
+                    .then(response => response.json())
+                    .then(data => {
+                        var minuteDetailList = document.getElementById('minute-detail-list');
+                        minuteDetailList.innerHTML = ''; // Clear previous content
 
-  // Trigger a click event on the anchor element
-  var event = document.createEvent('MouseEvents');
-  event.initMouseEvent(
-    'click', true, true, window, 0, 0, 0, 0, 0,
-    false, false, false, false, 0, null
-  );
-  link.dispatchEvent(event);
-}
+                        // Iterate over the data and create HTML elements
+                        data.forEach(item => {
+                            var listItem = document.createElement('li');
+                            listItem.classList.add('collapsible'); // Add the 'collapsible' class to the listItem
 
-document.addEventListener('DOMContentLoaded', function() {
-    loadBarGraph();
+                            var contentContainer = document.createElement('div');
+                            contentContainer.classList.add('content', 'collapsed'); // Add the 'content' and 'collapsed' classes to the contentContainer
 
-    var backButton = document.getElementById('back-button');
-    backButton.addEventListener('click', handleBackButtonClick);
-});
+                            for (const key in item) {
+                                var keySpan = document.createElement('span');
+                                keySpan.textContent = `${key}: `;
+                                contentContainer.appendChild(keySpan);
 
+                                var valueSpan = document.createElement('span');
+                                valueSpan.textContent = `${item[key]}`;
+                                contentContainer.appendChild(valueSpan);
 
+                                contentContainer.appendChild(document.createElement('br')); // Add a line break
+                            }
+
+                            // Create the button
+                            var button = document.createElement('button');
+                            button.textContent = 'Download File';
+                            button.addEventListener('click', function() {
+                                fetch('/process_file_location', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ responsefile_path: item.responsefile })
+                                })
+                                .then(response => {
+                                    if (response.ok) {
+                                        return response.text(); // or response.json() if the response is JSON
+                                    } else {
+                                        throw new Error('Request failed with status ' + response.status);
+                                    }
+                                })
+                                .then(data => {
+                                    console.log('Response:', data); // Log the full response
+                                    displayFormattedXML(data); // Display the response in the file-content column
+                                })
+                                .catch(error => {
+                                    console.error('An error occurred while processing file location', error);
+                                });
+                            });
+
+                            // Append the button to the content container
+                            contentContainer.appendChild(button);
+
+                            listItem.appendChild(contentContainer);
+                            minuteDetailList.appendChild(listItem);
+                        });
+
+                        // Add click event listener to each collapsible item
+                        var collapsibleItems = document.querySelectorAll('.collapsible');
+                        collapsibleItems.forEach(item => {
+                            item.addEventListener('click', function() {
+                                this.classList.toggle('active'); // Toggle the 'active' class
+                            });
+                        });
+                    });
+            } else {
+                isViewingDetailedData = true;
+                fetch('/graph_data/' + encodedTimestamp)
+                    .then(response => response.json())
+                    .then(data => {
+                        var parsedData = JSON.parse(data);
+                        Plotly.newPlot('bar-graph', parsedData.data, parsedData.layout)
+                            .then(function(gd) {
+                                gd.on('plotly_click', handleBarClick);
+                            });
+                    });
+            }
+        }
+    }
+
+    function handleBackButtonClick() {
+        isViewingDetailedData = false;
+        loadBarGraph();
+
+        var minuteDetailList = document.getElementById('minute-detail-list');
+        minuteDetailList.innerHTML = ''; // Clear the minute detail list
+
+        var fileContent = document.getElementById('file-content');
+        fileContent.textContent = ''; // Clear the file content
+    }
+
+    function displayFormattedXML(data) {
+        var fileContentColumn = document.getElementById('file-content');
+        fileContentColumn.innerHTML = ''; // Clear previous content
+
+        var parser = new DOMParser();
+        var xmlDoc = parser.parseFromString(data, 'application/xml');
+        var formattedXML = new XMLSerializer().serializeToString(xmlDoc);
+
+        var pre = document.createElement('pre');
+        pre.textContent = formattedXML;
+
+        fileContentColumn.appendChild(pre);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadBarGraph();
+
+        var backButton = document.getElementById('back-button');
+        backButton.addEventListener('click', handleBackButtonClick);
+    });
 </script>
 </body>
 </html>
