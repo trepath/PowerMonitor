@@ -84,6 +84,11 @@
             position: relative;
         }
 
+        #bar-graph {
+            width: 100%;
+            height: 500px; /* Set the initial height */
+            position: relative;
+        }
     </style>
 </head>
 <body>
@@ -121,6 +126,16 @@
                         });
                 });
             setTimeout(loadBarGraph, 30000);  // Call this function again after 30 seconds
+
+                    // Add resize event listener to dynamically resize the plot
+            window.addEventListener('resize', function() {
+                var container = document.getElementById('bar-graph');
+                var width = container.offsetWidth;
+
+                Plotly.relayout('bar-graph', {
+                    width: width
+                });
+            });
         }
     }
 
@@ -229,7 +244,8 @@
             button.disabled = true;
           }
 
-        button.addEventListener('click', function() {
+         button.addEventListener('click', function(event) {
+            event.stopPropagation(); // Prevent event propagation
             fetch(url, {
                 method: 'POST',
                 headers: {
