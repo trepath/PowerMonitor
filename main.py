@@ -33,12 +33,12 @@ status_colors = {
 status_labels = {
     0: 'Credit',
     1: 'Success',
-    500: 'Insurer Service Error',
-    504: 'Timeout',
-    403: 'Authentication Error',
+    500: '500 - Insurer Service Error',
+    504: '504 - Timeout',
+    403: '403 - Authentication Error',
     6: 'Critical Error',
     2: 'Critical Error WAWA',
-    400: 'Broker Error'
+    400: '400 - Broker Error'
     # Add more as needed
 }
 
@@ -253,20 +253,24 @@ def minute_breakdown_details(timestamp, status):
     # Convert the status string to a status code
     status = status_labels_reverse[status]
 
-    # Retrieve data from the PostgreSQL server for the specified hour and group by minute and status
     cursor.execute(
-        "SELECT date_trunc('minute', lsr.stamp) as minute, lsd.status as status, lsd.insurer as insurer, lsd.responsetime as responsetime "
+        "SELECT date_trunc('minute', lsr.stamp) as minute, lsd.status as status, lsd.insurer as insurer, lsd.responsetime as responsetime, "
+        "lsr.prov as prov, lsr.quotenumber as quotenumber, lsr.pq_clientid as pq_clientid, b.brokername as brokername "
         "FROM log_service_requests AS lsr "
         "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
+        "JOIN broker AS b ON lsr.pq_clientid = b.pq_clientid "
         "WHERE lsr.stamp >= %s and lsr.stamp < %s and lsd.status = %s",
-        (start_timestamp, end_timestamp, status))
+        (start_timestamp, end_timestamp, status)
+    )
 
     results = cursor.fetchall()
 
     # Convert results to a list of dictionaries
     result_list = []
-    for minute, status, insurer, responsetime in results:
-        result_list.append({'minute': minute, 'status': status, 'insurer': insurer, 'responsetime': responsetime})
+    columns = [column[0] for column in cursor.description]  # Get column names
+    for row in results:
+        result_dict = dict(zip(columns, row))
+        result_list.append(result_dict)
 
     # Close the cursor and the connection
     cursor.close()

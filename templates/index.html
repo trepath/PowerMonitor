@@ -3,6 +3,35 @@
 <head>
     <title>PowerMonitor</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<style>
+    .collapsible {
+        cursor: pointer;
+        list-style: none;
+        padding: 10px;
+        border: 1px solid #ccc;
+        margin-bottom: 10px;
+    }
+
+    .collapsible.active {
+        background-color: #f9f9f9;
+    }
+
+    .content {
+        margin-top: 10px;
+        overflow: hidden;
+        height: 1.6em;
+        line-height: 1.6em;
+    }
+
+    .content.collapsed {
+        height: 1.6em;
+    }
+
+    .collapsible.active .content {
+        height: auto;
+    }
+</style>
+
 </head>
 <body>
 <div id="bar-graph"></div>
@@ -45,20 +74,48 @@ function handleBarClick(event) {
             console.log(traceIndex);
             console.log(status);
 
-            fetch('/graph_data/' + encodedTimestamp + '/' + status)
-                .then(response => response.json())
-                .then(data => {
-                    console.log(data);
-                    var minuteDetailList = document.getElementById('minute-detail-list');
-                    minuteDetailList.innerHTML = ''; // Clear previous content
+fetch('/graph_data/' + encodedTimestamp + '/' + status)
+    .then(response => response.json())
+    .then(data => {
+        console.log(data);
+        var minuteDetailList = document.getElementById('minute-detail-list');
+        minuteDetailList.innerHTML = ''; // Clear previous content
 
-                    // Iterate over the data and create HTML elements
-                    data.forEach(item => {
-                        var listItem = document.createElement('li');
-                        listItem.textContent = `${item.insurer}, Status: ${item.status}`;
-                        minuteDetailList.appendChild(listItem);
-                    });
-                });
+        // Iterate over the data and create HTML elements
+        data.forEach(item => {
+            var listItem = document.createElement('li');
+            listItem.classList.add('collapsible'); // Add the 'collapsible' class to the listItem
+
+            var contentContainer = document.createElement('div');
+            contentContainer.classList.add('content', 'collapsed'); // Add the 'content' and 'collapsed' classes to the contentContainer
+
+            for (const key in item) {
+                var keySpan = document.createElement('span');
+                keySpan.textContent = `${key}: `;
+                contentContainer.appendChild(keySpan);
+
+                var valueSpan = document.createElement('span');
+                valueSpan.textContent = `${item[key]}`;
+                contentContainer.appendChild(valueSpan);
+
+                contentContainer.appendChild(document.createElement('br')); // Add a line break
+            }
+
+            listItem.appendChild(contentContainer);
+            minuteDetailList.appendChild(listItem);
+        });
+
+        // Add click event listener to each collapsible item
+        var collapsibleItems = document.querySelectorAll('.collapsible');
+        collapsibleItems.forEach(item => {
+            item.addEventListener('click', function() {
+                this.classList.toggle('active'); // Toggle the 'active' class
+            });
+        });
+    });
+
+
+
         }else{
             isViewingDetailedData = true;
             fetch('/graph_data/' + encodedTimestamp)
