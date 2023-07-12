@@ -261,7 +261,7 @@ def minute_breakdown_details(timestamp, status):
 
     cursor.execute(
         "SELECT date_trunc('minute', lsr.stamp) as minute, lsd.status as status, lsd.insurer as insurer, lsd.responsetime as responsetime, lsd.responsefile as responsefile, "
-        "lsd.requestfile as requestfile, lsr.requestfile as sr_requestfile, lsr.responsefile as sr_responsefile, lsr.lob as lob, lsr.servername as servername, "
+        "lsd.requestfile as requestfile, lsr.requestfile as sr_requestfile, lsr.responsefile as sr_responsefile, lsr.lob as lob, lsr.servername as servername, lsr.subbrokerid as subbrokerid, "
         "lsr.prov as prov, lsr.quotenumber as quotenumber, lsr.pq_clientid as pq_clientid, b.brokername as brokername "
         "FROM log_service_requests AS lsr "
         "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
@@ -287,6 +287,7 @@ def minute_breakdown_details(timestamp, status):
     return jsonify(result_list)
 
 @app.route('/process_file_location', methods=['POST'])
+@limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
 def process_file_location():
     data = request.get_json()
     responsefile_path = data['responsefile_path']

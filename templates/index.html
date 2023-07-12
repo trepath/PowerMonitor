@@ -98,7 +98,7 @@
                     .then(data => {
                         var minuteDetailList = document.getElementById('minute-detail-list');
                         minuteDetailList.innerHTML = ''; // Clear previous content
-
+                        console.log(data);
                         // Iterate over the data and create HTML elements
                         data.forEach(item => {
                             var listItem = document.createElement('li');
@@ -219,6 +219,13 @@
       contentContainer.appendChild(valueSpan);
 
       contentContainer.appendChild(document.createElement('br')); // Add a line break
+
+        if (item['subbrokerid']) {
+          valueSpan = document.createElement('span');
+          valueSpan.textContent = 'Subbroker: ' + item['subbrokerid'];
+          contentContainer.appendChild(valueSpan);
+          contentContainer.appendChild(document.createElement('br')); // Add a line break
+        }
 
       valueSpan = document.createElement('span');
         var lob_text;
