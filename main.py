@@ -4,7 +4,7 @@ import time
 
 import psycopg2
 import plotly.graph_objects as go
-from flask import Flask, render_template, jsonify, send_file, request
+from flask import Flask, render_template, jsonify, send_file, request, abort
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -65,10 +65,6 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour"]  # Limit each client to 200 requests per day and 50 requests per hour
 )
 
-@app.route('/download', methods=['GET'])
-def download_file():
-    responsefile_path = '/path/to/responsefile.ext'  # Replace with the actual path to your response file
-    return send_file(responsefile_path, as_attachment=True)
 
 
 @app.route('/')
@@ -294,8 +290,15 @@ def process_file_location():
     # Process the file location and perform the desired action
     # Remap sv-hv15 to sv-hv15.servepoint.net
     print(data)
-    responsefile_path = responsefile_path.replace('sv-hv15', 'sv-hv15.servpoint.net')
+    base_directory = '\\\\sv-hv15.servpoint.net'
+    responsefile_path = responsefile_path.replace('\\\\sv-hv15', '')
+    responsefile_path = base_directory + responsefile_path
     print(responsefile_path)
+
+    # Verify that the final path is still within the base_directory
+    if not str(responsefile_path).startswith(str(base_directory)):
+        abort(400, description='Invalid file path.')
+
     # Return the file for download
     return send_file(responsefile_path, as_attachment=True)
 

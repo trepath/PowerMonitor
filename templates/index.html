@@ -44,20 +44,56 @@
         }
 
         #file-content {
-            width: 65%;
+            flex: 1;
             height: 100vh;
             overflow-y: scroll;
             padding: 10px;
+            margin-left: 15px;
         }
+
+        .tab {
+            display: none;
+        }
+
+        .tab.active {
+            display: block;
+        }
+
+        .tab-buttons {
+            margin-bottom: 10px;
+        }
+
+        .tab-buttons button {
+            padding: 5px 10px;
+            margin-right: 5px;
+        }
+        .rounder_corner {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+
     </style>
 </head>
 <body>
-<div id="bar-graph"></div>
-<button id="back-button">Back</button>
-<div class="container">
-    <div id="minute-detail-list"></div>
-    <div id="file-content"></div>
+<div class="tab-buttons">
+    <button id="request-per-hour-button" onclick="switchTab('request-per-hour')">JAWS Server Stats</button>
+    <button id="empty-tab-button" onclick="switchTab('empty-tab')">Empty Tab</button>
 </div>
+<div id="main-frame">
+    <div id="request-per-hour" class="tab active">
+        <div id="bar-graph" class="rounder_corner"></div>
+        <button id="back-button">Back</button>
+        <div class="container">
+            <div class="rounder_corner" id="minute-detail-list"></div>
+            <div class="rounder_corner"  id="file-content"></div>
+        </div>
+    </div>
+    <div id="empty-tab" class="tab">
+        <h1>Empty Tab</h1>
+    </div>
+</div>
+
 <script>
     // Function to load the initial bar graph data
     var isViewingDetailedData = false;
@@ -244,13 +280,29 @@
       contentContainer.appendChild(document.createElement('br')); // Add a line break
     }
 
+    function switchTab(tabId) {
+        var tabs = document.getElementsByClassName('tab');
+        for (var i = 0; i < tabs.length; i++) {
+            tabs[i].classList.remove('active');
+        }
 
+        var buttons = document.getElementsByClassName('tab-buttons')[0].getElementsByTagName('button');
+        for (var j = 0; j < buttons.length; j++) {
+            buttons[j].classList.remove('active');
+        }
+
+        document.getElementById(tabId).classList.add('active');
+        document.getElementById(tabId + '-button').classList.add('active');
+    }
 
     document.addEventListener('DOMContentLoaded', function() {
         loadBarGraph();
 
         var backButton = document.getElementById('back-button');
         backButton.addEventListener('click', handleBackButtonClick);
+
+        var mainTab = document.getElementById('request-per-hour-button');
+        mainTab.addEventListener('click', handleBackButtonClick);
     });
 </script>
 </body>
