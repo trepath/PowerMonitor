@@ -264,14 +264,14 @@
                 console.log('Response:', data); // Log the full response
                 displayFormattedXML(data); // Display the response in the file-content column
 
-    // Add the copy icon to the file-content div
-    var fileContentDiv = document.getElementById('file-content');
-    fileContentDiv.classList.add('file-content');
-    var copyIcon = document.createElement('span');
-    copyIcon.innerHTML = '&#128203;'; // Unicode for clipboard icon (📋)
-    copyIcon.classList.add('copy-icon');
-    copyIcon.addEventListener('click', copyFileContents);
-    fileContentDiv.appendChild(copyIcon);
+                // Add the copy icon to the file-content div
+                var fileContentDiv = document.getElementById('file-content');
+                fileContentDiv.classList.add('file-content');
+                var copyIcon = document.createElement('span');
+                copyIcon.innerHTML = '&#128203;'; // Unicode for clipboard icon (📋)
+                copyIcon.classList.add('copy-icon');
+                copyIcon.addEventListener('click', copyFileContents);
+                fileContentDiv.appendChild(copyIcon);
             })
             .catch(error => {
                 console.error('An error occurred while processing file location', error);
@@ -310,9 +310,20 @@
           lob_text = 'Credit';
         }
 
-
       valueSpan.textContent = item['insurer'] + ' ' + lob_text + ' ' + item['prov'];
       contentContainer.appendChild(valueSpan);
+
+      contentContainer.appendChild(document.createElement('br')); // Add a line break
+
+      responsetimeSpan = document.createElement('span');
+      responsetimeSpan.textContent = 'Response Time: ' + item['responsetime'];
+      responsetimeSpan.style.cssFloat = 'left'; // Align to the left
+      contentContainer.appendChild(responsetimeSpan);
+
+      serverSpan = document.createElement('span');
+      serverSpan.textContent = item['servername'];
+      serverSpan.style.cssFloat = 'right'; // Align to the right
+      contentContainer.appendChild(serverSpan);
 
       contentContainer.appendChild(document.createElement('br')); // Add a line break
     }

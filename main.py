@@ -18,6 +18,9 @@ DB_NAME = config['PostgreSQL']['DB_NAME']
 DB_USER = config['PostgreSQL']['DB_USER']
 DB_PASS = config['PostgreSQL']['DB_PASS']
 
+# File Locations
+JAWS_LOGS = config['File Locations']['JAWS_LOGS']
+
 # Define color codes and labels for status codes
 status_colors = {
     0: 'rgb(200, 200, 200)',
@@ -132,7 +135,7 @@ def graph_data():
     # Configure the layout of the bar graph
     fig.update_layout(
         barmode='stack',
-        title='Total Online Requests per Hour',
+        title='Requests by Hour for last 24 hours',
         xaxis_title='Hour',
         yaxis_title='Total Requests'
     )
@@ -293,6 +296,8 @@ def process_file_location():
     # Remap sv-hv15 to sv-hv15.servepoint.net
     print(data)
     base_directory = '\\\\sv-hv15.servpoint.net'
+    print(base_directory)
+    print(JAWS_LOGS)
     responsefile_path = responsefile_path.replace('\\\\sv-hv15', '')
     responsefile_path = base_directory + responsefile_path
     print(responsefile_path)
