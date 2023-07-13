@@ -84,74 +84,10 @@ def reverse_lookup(dictionary, value):
     return None
 
 
-@app.route('/graph_data')
-@limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
-def graph_data():
-    if cache['graph_data']['timestamp'] and time.time() - cache['graph_data']['timestamp'] < 60:
-        return cache['graph_data']['data']
-
-    # Connect to the PostgreSQL server
-    conn = psycopg2.connect(
-        host=DB_HOST,
-        database=DB_NAME,
-        user=DB_USER,
-        password=DB_PASS
-    )
-
-    # Create a cursor to execute queries
-    cursor = conn.cursor()
-
-    # Retrieve data from the PostgreSQL server and aggregate by hour and status
-    cursor.execute(
-        "SELECT date_trunc('hour', lsr.stamp), lsd.status, COUNT(*) "
-        "FROM log_service_requests AS lsr "
-        "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
-        "WHERE lsr.stamp >= NOW() - INTERVAL '24 hours' "
-        "GROUP BY date_trunc('hour', lsr.stamp), lsd.status")
-    results = cursor.fetchall()
-
-    # Extract timestamps, statuses, and values from the results
-    timestamps, statuses, values = zip(*results)
-
-    # Create a dictionary mapping timestamps to dictionaries that map statuses to values
-    data = {}
-    for timestamp, status, value in results:
-        if timestamp not in data:
-            data[timestamp] = {}
-        data[timestamp][status] = value
-
-    # Close the cursor and the connection
-    cursor.close()
-    conn.close()
-
-    # Create the stacked bar graph using Plotly
-    fig = go.Figure(data=[
-        go.Bar(name=status_labels.get(status, status), x=list(data.keys()),
-               y=[data[timestamp].get(status, 0) for timestamp in data],
-               marker_color=status_colors.get(status, 'rgb(128, 128, 128)')) # default color if status is not in the dictionary
-        for status in set(statuses)
-    ])
-
-    # Configure the layout of the bar graph
-    fig.update_layout(
-        barmode='stack',
-        title='Requests by Hour for last 24 hours',
-        xaxis_title='Hour',
-        yaxis_title='Total Requests'
-    )
-
-    cache['graph_data']['timestamp'] = time.time()
-    cache['graph_data']['data'] = jsonify(fig.to_json())
-    return cache['graph_data']['data']
-
-    # Convert the figure to JSON and return the data
-    return jsonify(fig.to_json())
-
-from datetime import datetime, timedelta
-
 @app.route('/graph_data/<timestamp>')
 @limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
 def minute_breakdown(timestamp):
+    print("minute_breakdown")
     # And for /graph_data/<timestamp>
     if cache['minute_breakdown']['timestamp'] and time.time() - cache['minute_breakdown']['timestamp'] < 60:
         return cache['minute_breakdown']['data']
@@ -226,6 +162,86 @@ def minute_breakdown(timestamp):
 
     # Convert the figure to JSON and return the data
     return jsonify(fig.to_json())
+
+@app.route('/graph_data', defaults={'pq_clientid': None})
+@app.route('/graph_data/<pq_clientid>')
+@limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
+def graph_data(pq_clientid):
+    print("graph_data")
+    if cache['graph_data']['timestamp'] and time.time() - cache['graph_data']['timestamp'] < 60:
+        return cache['graph_data']['data']
+
+    # Connect to the PostgreSQL server
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS
+    )
+
+    # Create a cursor to execute queries
+    cursor = conn.cursor()
+
+    # SQL query string
+    sql_query = (
+        "SELECT date_trunc('hour', lsr.stamp), lsd.status, COUNT(*) "
+        "FROM log_service_requests AS lsr "
+        "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
+        "WHERE lsr.stamp >= NOW() - INTERVAL '24 hours' "
+    )
+
+    if pq_clientid:
+        sql_query += "AND lsr.pq_clientid = %s "
+
+    sql_query += "GROUP BY date_trunc('hour', lsr.stamp), lsd.status"
+
+    if pq_clientid:
+        cursor.execute(sql_query, (pq_clientid,))
+    else:
+        cursor.execute(sql_query)
+
+    results = cursor.fetchall()
+
+    print(sql_query)
+    print(results)
+    # Extract timestamps, statuses, and values from the results
+    timestamps, statuses, values = zip(*results)
+
+    # Create a dictionary mapping timestamps to dictionaries that map statuses to values
+    data = {}
+    for timestamp, status, value in results:
+        if timestamp not in data:
+            data[timestamp] = {}
+        data[timestamp][status] = value
+
+    # Close the cursor and the connection
+    cursor.close()
+    conn.close()
+
+    # Create the stacked bar graph using Plotly
+    fig = go.Figure(data=[
+        go.Bar(name=status_labels.get(status, status), x=list(data.keys()),
+               y=[data[timestamp].get(status, 0) for timestamp in data],
+               marker_color=status_colors.get(status, 'rgb(128, 128, 128)')) # default color if status is not in the dictionary
+        for status in set(statuses)
+    ])
+
+    # Configure the layout of the bar graph
+    fig.update_layout(
+        barmode='stack',
+        title='Requests by Hour for last 24 hours',
+        xaxis_title='Hour',
+        yaxis_title='Total Requests'
+    )
+
+    cache['graph_data']['timestamp'] = time.time()
+    cache['graph_data']['data'] = jsonify(fig.to_json())
+    return cache['graph_data']['data']
+
+    # Convert the figure to JSON and return the data
+    return jsonify(fig.to_json())
+
+from datetime import datetime, timedelta
 
 @app.route('/graph_data/<timestamp>/<status>')
 @limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
