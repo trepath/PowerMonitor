@@ -100,6 +100,9 @@
     <div id="request-per-hour" class="tab active">
         <div id="bar-graph" class="rounder_corner"></div>
         <button id="back-button">Back</button>
+        <select id="broker-dropdown">
+            <!-- Broker options will be populated here by JavaScript -->
+        </select>
         <div class="container">
             <div class="rounder_corner" id="minute-detail-list"></div>
             <div class="rounder_corner"  id="file-content"></div>
@@ -213,7 +216,7 @@
     function handleBackButtonClick() {
         isViewingDetailedData = false;
         loadBarGraph();
-
+        loadBrokers();
         var minuteDetailList = document.getElementById('minute-detail-list');
         minuteDetailList.innerHTML = ''; // Clear the minute detail list
 
@@ -346,7 +349,7 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         loadBarGraph();
-
+        loadBrokers();
         var backButton = document.getElementById('back-button');
         backButton.addEventListener('click', handleBackButtonClick);
 
@@ -365,6 +368,26 @@
         document.execCommand('copy');
         selection.removeAllRanges();
     }
+function loadBrokers() {
+    fetch('/brokers')
+        .then(response => response.json())
+        .then(data => {
+        console.log('Brokers:', data);
+            var dropdown = document.getElementById('broker-dropdown');
+            // Clear old options
+            dropdown.innerHTML = '';
+            // Sort data by broker name
+            data.sort((a, b) => a[0].localeCompare(b[0]));
+            // Add an option for each broker
+            data.forEach(broker => {
+                var option = document.createElement('option');
+                option.value = broker[1]; // pq_clientid
+                option.textContent = broker[0]; // brokername
+                dropdown.appendChild(option);
+            });
+        });
+}
+
 
 </script>
 </body>
