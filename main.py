@@ -91,7 +91,13 @@ def reverse_lookup(dictionary, value):
 def minute_breakdown(timestamp):
     print("minute_breakdown " + timestamp)
 
-    pq_clientid = request.args.get('pq_clientid', None)  # Get the pq_clientid from the query string
+    input_string = request.args.get('pq_clientid', None)  # Get the pq_clientid from the query string
+    words = input_string.split("-")
+
+    pq_clientid =  words[0]  # "none"
+    server = words[1]  # "none"
+
+    #pq_clientid = request.args.get('pq_clientid', None)  # Get the pq_clientid from the query string
     print(cache['minute_breakdown'])
     if cache['minute_breakdown']['pq_clientid'] == pq_clientid and cache['minute_breakdown'][
         'timestamp'] == timestamp and time.time() - cache['minute_breakdown']['current_time'] < 60:

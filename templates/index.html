@@ -100,6 +100,10 @@
     <div id="request-per-hour" class="tab active">
         <div id="bar-graph" class="rounder_corner"></div>
         <button id="back-button">Back</button>
+        <select id="server-dropdown">
+            <option value="Production Servers">Production</option>
+            <option value="Testing Servers">Testing</option>
+        </select>
         <select id="broker-dropdown">
             <!-- Broker options will be populated here by JavaScript -->
         </select>
@@ -218,7 +222,7 @@
                     });
             } else {
                 isViewingDetailedData = true;
-                url = '/graph_data/' + encodedTimestamp + '?pq_clientid=' + selectedBroker;
+                url = '/graph_data/' + encodedTimestamp + '?pq_clientid=' + selectedBroker+"-production";
                 fetch(url)
                     .then(response => response.json())
                     .then(data => {
@@ -399,6 +403,14 @@
         // Add an event listener to the broker dropdown
         var dropdown = document.getElementById('broker-dropdown');
         dropdown.addEventListener('change', refilter);
+
+        var serverDropdown = document.getElementById('server-dropdown');
+        serverDropdown.addEventListener('change', function() {
+            var selectedServer = serverDropdown.value;
+            console.log('Selected Server:', selectedServer);
+            // Perform actions based on the selected server value
+            // For example, you can reload data specific to the selected server
+        });
     });
 
     function refilter(){
