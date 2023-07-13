@@ -55,7 +55,7 @@ cache = {
         'data': None,
     },
     'minute_breakdown': {
-        'request': None,  # The request object for the current request
+        'pq_clientid': None,
         'timestamp': None,
         'data': None,
     },
@@ -89,8 +89,11 @@ def reverse_lookup(dictionary, value):
 @limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
 def minute_breakdown(timestamp):
     print("minute_breakdown")
-    # And for /graph_data/<timestamp>
-    if cache['minute_breakdown']['timestamp'] and time.time() - cache['minute_breakdown']['timestamp'] < 60:
+
+    pq_clientid = request.args.get('pq_clientid', None)  # Get the pq_clientid from the query string
+
+    if cache['minute_breakdown']['pq_clientid'] == pq_clientid and cache['minute_breakdown'][
+        'timestamp'] and time.time() - cache['minute_breakdown']['timestamp'] < 60:
         return cache['minute_breakdown']['data']
 
     # Connect to the PostgreSQL server
@@ -114,13 +117,23 @@ def minute_breakdown(timestamp):
     start_timestamp = timestamp_datetime
     end_timestamp = start_timestamp + timedelta(hours=1)
 
-    # Retrieve data from the PostgreSQL server for the specified hour and group by minute and status
-    cursor.execute(
+    # SQL query string
+    sql_query = (
         "SELECT date_trunc('minute', lsr.stamp) as minute, lsd.status, COUNT(*) "
         "FROM log_service_requests AS lsr "
         "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
         "WHERE lsr.stamp >= %s and lsr.stamp < %s "
-        "GROUP BY date_trunc('minute', lsr.stamp), lsd.status", (start_timestamp, end_timestamp))
+    )
+
+    if pq_clientid != 'None':
+        sql_query += "AND lsr.pq_clientid = %s "
+
+    sql_query += "GROUP BY date_trunc('minute', lsr.stamp), lsd.status"
+
+    if pq_clientid != 'None':
+        cursor.execute(sql_query, (start_timestamp, end_timestamp, pq_clientid))
+    else:
+        cursor.execute(sql_query, (start_timestamp, end_timestamp))
 
     results = cursor.fetchall()
 
@@ -157,12 +170,10 @@ def minute_breakdown(timestamp):
         yaxis_title='Total Number'
     )
 
-    # And for /graph_data/<timestamp>
+    cache['minute_breakdown']['pq_clientid'] = pq_clientid
     cache['minute_breakdown']['timestamp'] = time.time()
     cache['minute_breakdown']['data'] = jsonify(fig.to_json())
-
-    # Convert the figure to JSON and return the data
-    return jsonify(fig.to_json())
+    return cache['minute_breakdown']['data']
 
 @app.route('/graph_data/client', defaults={'pq_clientid': None})
 @app.route('/graph_data/client/<pq_clientid>')

@@ -160,6 +160,12 @@
             var pointNumber = event.points[0].pointNumber;
             var traceIndex = event.points[0].curveNumber;
 
+            var dropdown = document.getElementById('broker-dropdown');
+            var selectedBroker = dropdown.value;  // Get the selected broker pq_clientid
+            if (selectedBroker === '') {
+                selectedBroker = 'None';
+            }
+
             if (isViewingDetailedData) {
                 // Get the Plotly figure
                 var graphDiv = document.getElementById('bar-graph');
@@ -176,28 +182,30 @@
                         console.log(data);
                         // Iterate over the data and create HTML elements
                         data.forEach(item => {
-                            var listItem = document.createElement('li');
-                            listItem.classList.add('collapsible'); // Add the 'collapsible' class to the listItem
+                            if (item.pq_clientid == selectedBroker || selectedBroker == 'None') {
+                                var listItem = document.createElement('li');
+                                listItem.classList.add('collapsible'); // Add the 'collapsible' class to the listItem
 
-                            var contentContainer = document.createElement('div');
-                            contentContainer.classList.add('content', 'collapsed'); // Add the 'content' and 'collapsed' classes to the contentContainer
+                                var contentContainer = document.createElement('div');
+                                contentContainer.classList.add('content', 'collapsed'); // Add the 'content' and 'collapsed' classes to the contentContainer
 
-                            createRequestDetails(item, contentContainer);
+                                createRequestDetails(item, contentContainer);
 
-                            var button1 = createDownloadButton('/process_file_location', 'ServiceRequest', item.sr_requestfile);
-                            var button2 = createDownloadButton('/process_file_location', 'ServiceResponse', item.sr_responsefile);
-                            var button3 = createDownloadButton('/process_file_location', 'Request', item.requestfile);
-                            var button4 = createDownloadButton('/process_file_location', 'Response', item.responsefile);
+                                var button1 = createDownloadButton('/process_file_location', 'ServiceRequest', item.sr_requestfile);
+                                var button2 = createDownloadButton('/process_file_location', 'ServiceResponse', item.sr_responsefile);
+                                var button3 = createDownloadButton('/process_file_location', 'Request', item.requestfile);
+                                var button4 = createDownloadButton('/process_file_location', 'Response', item.responsefile);
 
 
-                            // Append the button to the content container
-                            contentContainer.appendChild(button1);
-                            contentContainer.appendChild(button2);
-                            contentContainer.appendChild(button3);
-                            contentContainer.appendChild(button4);
+                                // Append the button to the content container
+                                contentContainer.appendChild(button1);
+                                contentContainer.appendChild(button2);
+                                contentContainer.appendChild(button3);
+                                contentContainer.appendChild(button4);
 
-                            listItem.appendChild(contentContainer);
-                            minuteDetailList.appendChild(listItem);
+                                listItem.appendChild(contentContainer);
+                                minuteDetailList.appendChild(listItem);
+                            }
                         });
 
                         // Add click event listener to each collapsible item
@@ -210,7 +218,8 @@
                     });
             } else {
                 isViewingDetailedData = true;
-                fetch('/graph_data/' + encodedTimestamp)
+                url = '/graph_data/' + encodedTimestamp + '?pq_clientid=' + selectedBroker;
+                fetch(url)
                     .then(response => response.json())
                     .then(data => {
                         var parsedData = JSON.parse(data);
@@ -222,6 +231,7 @@
             }
         }
     }
+
 
     function handleBackButtonClick() {
         isViewingDetailedData = false;
@@ -298,6 +308,9 @@
     }
 
     function createRequestDetails(item, contentContainer) {
+        // Clear the contentContainer
+        contentContainer.innerHTML = '';
+
       var valueSpan = document.createElement('span');
       valueSpan.textContent = item['brokername'];
       contentContainer.appendChild(valueSpan);
@@ -341,6 +354,13 @@
       contentContainer.appendChild(serverSpan);
 
       contentContainer.appendChild(document.createElement('br')); // Add a line break
+
+      if(item['status']!= 1){
+          valueSpan = document.createElement('span');
+          valueSpan.textContent = 'Status: ' + item['status'];
+          contentContainer.appendChild(valueSpan);
+          contentContainer.appendChild(document.createElement('br')); // Add a line break
+        }
     }
 
     function switchTab(tabId) {
@@ -372,9 +392,13 @@
 
         // Add an event listener to the broker dropdown
         var dropdown = document.getElementById('broker-dropdown');
-        dropdown.addEventListener('change', loadBarGraph);
+        dropdown.addEventListener('change', refilter);
     });
 
+    function refilter(){
+        isViewingDetailedData = false;
+        loadBarGraph();
+    }
     // Function to copy file contents to clipboard
     function copyFileContents() {
         var fileContent = document.getElementById('file-content');
