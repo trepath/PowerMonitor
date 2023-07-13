@@ -118,8 +118,18 @@
     var isViewingDetailedData = false;
 
     function loadBarGraph() {
+        var dropdown = document.getElementById('broker-dropdown');
+        var selectedBroker = dropdown.value;  // Get the selected broker pq_clientid
+        if (selectedBroker === '') {
+            selectedBroker = 'None';
+        }
+        console.log(selectedBroker);
         if (!isViewingDetailedData) {
-            fetch('/graph_data')
+            // Include selectedBroker in the URL only when it is not 'None'
+            //var url = '/graph_data/client/' + (selectedBroker !== 'None' ? selectedBroker : '');
+            var url = '/graph_data/client/' + selectedBroker;
+            console.log('url:' + url);
+            fetch(url)
                 .then(response => response.json())
                 .then(data => {
                     var parsedData = JSON.parse(data);
@@ -130,7 +140,7 @@
                 });
             setTimeout(loadBarGraph, 30000);  // Call this function again after 30 seconds
 
-                    // Add resize event listener to dynamically resize the plot
+            // Add resize event listener to dynamically resize the plot
             window.addEventListener('resize', function() {
                 var container = document.getElementById('bar-graph');
                 var width = container.offsetWidth;
@@ -215,8 +225,10 @@
 
     function handleBackButtonClick() {
         isViewingDetailedData = false;
-        loadBarGraph();
+
         loadBrokers();
+        loadBarGraph();
+
         var minuteDetailList = document.getElementById('minute-detail-list');
         minuteDetailList.innerHTML = ''; // Clear the minute detail list
 
@@ -348,13 +360,19 @@
 
 
     document.addEventListener('DOMContentLoaded', function() {
+
+        loadBrokers();  // Call loadBrokers after loadBarGraph to ensure the graph is initially loaded with all data
         loadBarGraph();
-        loadBrokers();
+
         var backButton = document.getElementById('back-button');
         backButton.addEventListener('click', handleBackButtonClick);
 
         var mainTab = document.getElementById('request-per-hour-button');
         mainTab.addEventListener('click', handleBackButtonClick);
+
+        // Add an event listener to the broker dropdown
+        var dropdown = document.getElementById('broker-dropdown');
+        dropdown.addEventListener('change', loadBarGraph);
     });
 
     // Function to copy file contents to clipboard
@@ -368,25 +386,31 @@
         document.execCommand('copy');
         selection.removeAllRanges();
     }
-function loadBrokers() {
-    fetch('/brokers')
-        .then(response => response.json())
-        .then(data => {
-        console.log('Brokers:', data);
-            var dropdown = document.getElementById('broker-dropdown');
-            // Clear old options
-            dropdown.innerHTML = '';
-            // Sort data by broker name
-            data.sort((a, b) => a[0].localeCompare(b[0]));
-            // Add an option for each broker
-            data.forEach(broker => {
-                var option = document.createElement('option');
-                option.value = broker[1]; // pq_clientid
-                option.textContent = broker[0]; // brokername
-                dropdown.appendChild(option);
+
+    function loadBrokers() {
+        fetch('/brokers')
+            .then(response => response.json())
+            .then(data => {
+            console.log('Brokers:', data);
+                var dropdown = document.getElementById('broker-dropdown');
+                // Clear old options
+                dropdown.innerHTML = '';
+                // Add a default option
+                var defaultOption = document.createElement('option');
+                defaultOption.value = 'None';
+                defaultOption.textContent = 'All brokers';
+                dropdown.appendChild(defaultOption);
+                // Sort data by broker name
+                data.sort((a, b) => a[0].localeCompare(b[0]));
+                // Add an option for each broker
+                data.forEach(broker => {
+                    var option = document.createElement('option');
+                    option.value = broker[1]; // pq_clientid
+                    option.textContent = broker[0]; // brokername
+                    dropdown.appendChild(option);
+                });
             });
-        });
-}
+    }
 
 
 </script>

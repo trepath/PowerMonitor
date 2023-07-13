@@ -50,6 +50,7 @@ status_labels = {
 # Define a cache to store the graph data
 cache = {
     'graph_data': {
+        'pq_clientid': None,
         'timestamp': None,
         'data': None,
     },
@@ -163,12 +164,14 @@ def minute_breakdown(timestamp):
     # Convert the figure to JSON and return the data
     return jsonify(fig.to_json())
 
-@app.route('/graph_data', defaults={'pq_clientid': None})
-@app.route('/graph_data/<pq_clientid>')
+@app.route('/graph_data/client', defaults={'pq_clientid': None})
+@app.route('/graph_data/client/<pq_clientid>')
 @limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
 def graph_data(pq_clientid):
     print("graph_data")
-    if cache['graph_data']['timestamp'] and time.time() - cache['graph_data']['timestamp'] < 60:
+    print(pq_clientid)
+    if cache['graph_data']['pq_clientid'] == pq_clientid and cache['graph_data']['timestamp'] and time.time() - cache['graph_data']['timestamp'] < 60:
+        print("cache")
         return cache['graph_data']['data']
 
     # Connect to the PostgreSQL server
@@ -190,7 +193,7 @@ def graph_data(pq_clientid):
         "WHERE lsr.stamp >= NOW() - INTERVAL '24 hours' "
     )
 
-    if pq_clientid:
+    if pq_clientid != 'None':
         sql_query += "AND lsr.pq_clientid = %s "
 
     sql_query += "GROUP BY date_trunc('hour', lsr.stamp), lsd.status"
@@ -199,6 +202,8 @@ def graph_data(pq_clientid):
         cursor.execute(sql_query, (pq_clientid,))
     else:
         cursor.execute(sql_query)
+
+    print("Query: " + sql_query)
 
     results = cursor.fetchall()
 
@@ -234,6 +239,7 @@ def graph_data(pq_clientid):
         yaxis_title='Total Requests'
     )
 
+    cache['graph_data']['pq_clientid'] = pq_clientid
     cache['graph_data']['timestamp'] = time.time()
     cache['graph_data']['data'] = jsonify(fig.to_json())
     return cache['graph_data']['data']
