@@ -322,9 +322,9 @@
       contentContainer.appendChild(document.createElement('br')); // Add a line break
 
         if (item['subbrokerid']) {
-          valueSpan = document.createElement('span');
-          valueSpan.textContent = 'Subbroker: ' + item['subbrokerid'];
-          contentContainer.appendChild(valueSpan);
+          subbrokeridSpan = document.createElement('span');
+          subbrokeridSpan.textContent = 'Subbroker: ' + item['subbrokerid'];
+          contentContainer.appendChild(subbrokeridSpan);
           contentContainer.appendChild(document.createElement('br')); // Add a line break
         }
 
@@ -339,7 +339,13 @@
         }
 
       valueSpan.textContent = item['insurer'] + ' ' + lob_text + ' ' + item['prov'];
+      valueSpan.style.cssFloat = 'left'; // Align to the left
       contentContainer.appendChild(valueSpan);
+
+      quoteNumberSpan = document.createElement('span');
+        quoteNumberSpan.textContent = item['quotenumber'];
+        quoteNumberSpan.style.cssFloat = 'right'; // Align to the right
+        contentContainer.appendChild(quoteNumberSpan);
 
       contentContainer.appendChild(document.createElement('br')); // Add a line break
 
@@ -397,8 +403,17 @@
 
     function refilter(){
         isViewingDetailedData = false;
+        // Clear the contentContainer
+        var detailsContainer = document.getElementById('minute-detail-list');
+        detailsContainer.innerHTML = '';
+
+        // Clear the file-content
+        var fileContentDiv = document.getElementById('file-content');
+        fileContentDiv.innerHTML = '';
+
         loadBarGraph();
     }
+
     // Function to copy file contents to clipboard
     function copyFileContents() {
         var fileContent = document.getElementById('file-content');

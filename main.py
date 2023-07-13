@@ -56,6 +56,7 @@ cache = {
     },
     'minute_breakdown': {
         'pq_clientid': None,
+        'current_time': None,
         'timestamp': None,
         'data': None,
     },
@@ -88,12 +89,13 @@ def reverse_lookup(dictionary, value):
 @app.route('/graph_data/<timestamp>')
 @limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
 def minute_breakdown(timestamp):
-    print("minute_breakdown")
+    print("minute_breakdown " + timestamp)
 
     pq_clientid = request.args.get('pq_clientid', None)  # Get the pq_clientid from the query string
-
+    print(cache['minute_breakdown'])
     if cache['minute_breakdown']['pq_clientid'] == pq_clientid and cache['minute_breakdown'][
-        'timestamp'] and time.time() - cache['minute_breakdown']['timestamp'] < 60:
+        'timestamp'] == timestamp and time.time() - cache['minute_breakdown']['current_time'] < 60:
+        print("Using cached data")
         return cache['minute_breakdown']['data']
 
     # Connect to the PostgreSQL server
@@ -171,7 +173,8 @@ def minute_breakdown(timestamp):
     )
 
     cache['minute_breakdown']['pq_clientid'] = pq_clientid
-    cache['minute_breakdown']['timestamp'] = time.time()
+    cache['minute_breakdown']['timestamp'] = timestamp
+    cache['minute_breakdown']['current_time'] = time.time()
     cache['minute_breakdown']['data'] = jsonify(fig.to_json())
     return cache['minute_breakdown']['data']
 
