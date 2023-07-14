@@ -313,12 +313,21 @@
                       listItem.appendChild(contentContainer);
                       minuteDetailList.appendChild(listItem);
 
-                      // Add click event listener to toggle collapsing/expanding of the list item
-                      listItem.addEventListener('click', function () {
-                        this.classList.toggle('active');
-                        var content = this.querySelector('.content');
-                        content.classList.toggle('collapsed');
-                      });
+                        // Add click event listener to toggle collapsing/expanding of the list item
+                        listItem.addEventListener("click", function () {
+                            var listItems = document.getElementsByClassName("collapsible");
+                            for (var i = 0; i < listItems.length; i++) {
+                                if (listItems[i] !== this) {
+                                    listItems[i].classList.remove("active");
+                                    var content = listItems[i].querySelector(".content");
+                                    content.classList.add("collapsed");
+                                }
+                            }
+
+                            this.classList.toggle("active");
+                            var content = this.querySelector(".content");
+                            content.classList.toggle("collapsed");
+                        });
                     });
 
 
@@ -454,15 +463,6 @@
         contentContainer.appendChild(button2);
 
       contentContainer.appendChild(document.createElement('br')); // Add a line break
-
-
-
-      if(item['status']!= 1){
-          valueSpan = document.createElement('span');
-          valueSpan.textContent = 'Status: ' + item['status'];
-          contentContainer.appendChild(valueSpan);
-          contentContainer.appendChild(document.createElement('br')); // Add a line break
-        }
     }
 
     function switchTab(tabId) {

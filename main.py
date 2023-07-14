@@ -136,7 +136,7 @@ def minute_breakdown(timestamp):
 
     print("query_params:"+str(query_params))
     return execute_and_cache_query('minute_breakdown', pq_clientid, timestamp, sql_query, 'pq_clientid',
-                                   'Online Rating Request per Minute: {}'.format(timestamp), 'Timestamp',
+                                   server + ' JAWS Requests At: {}'.format(timestamp), 'Timestamp',
                                    'Total Number', query_params)
 
 
@@ -171,7 +171,7 @@ def graph_data(pq_clientid,server):
     sql_query += "GROUP BY date_trunc('hour', lsr.stamp), lsd.status"
 
     return execute_and_cache_query('graph_data', pq_clientid, None, sql_query, 'pq_clientid',
-                                   'Requests by Hour for last 24 hours', 'Hour', 'Total Requests', tuple(query_params))
+                                   server + ' JAWS Requests for last 24 hours', 'Hour', 'Total Requests', tuple(query_params))
 
 
 from datetime import datetime, timedelta
@@ -202,7 +202,8 @@ def minute_breakdown_details(timestamp, status, server):
 
     # Calculate the start and end timestamps for the selected hour
     start_timestamp = timestamp_datetime
-    end_timestamp = start_timestamp + timedelta(hours=1)
+    #end_timestamp = start_timestamp + timedelta(hours=1)
+    end_timestamp = start_timestamp + timedelta(minutes=1)
 
     #Reverse the status label dictionary
     status_labels_reverse = {v: k for k, v in status_labels.items()}
