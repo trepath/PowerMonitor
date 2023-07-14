@@ -211,13 +211,13 @@ def minute_breakdown_details(timestamp, status, server):
     print("status " + str(status))
     # SQL query string
     sql_query = (
-        "SELECT date_trunc('minute', lsr.stamp) as minute, lsd.status as status, lsd.insurer as insurer, lsd.responsetime as responsetime, lsd.responsefile as responsefile, "
+        "SELECT date_trunc('minute', lsr.stamp) as minute, lsr.srnumber as srnumber, lsd.status as status, lsd.insurer as insurer, lsd.responsetime as responsetime, lsd.responsefile as responsefile, "
         "lsd.requestfile as requestfile, lsr.requestfile as sr_requestfile, lsr.responsefile as sr_responsefile, lsr.lob as lob, lsr.servername as servername, lsr.subbrokerid as subbrokerid, "
         "lsr.prov as prov, lsr.quotenumber as quotenumber, lsr.pq_clientid as pq_clientid, b.brokername as brokername "
         "FROM log_service_requests AS lsr "
         "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
         "JOIN broker AS b ON lsr.pq_clientid = b.pq_clientid "
-        "WHERE lsr.stamp >= %s and lsr.stamp < %s and lsd.status = %s"
+        "WHERE lsr.stamp >= %s and lsr.stamp < %s"
     )
 
     print(server)
@@ -232,7 +232,7 @@ def minute_breakdown_details(timestamp, status, server):
 
     print(sql_query)
     print((start_timestamp, end_timestamp, status))
-    cursor.execute(sql_query, (start_timestamp, end_timestamp, status))
+    cursor.execute(sql_query, (start_timestamp, end_timestamp))
 
     results = cursor.fetchall()
 
