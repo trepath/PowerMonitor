@@ -124,35 +124,27 @@ def minute_breakdown(timestamp):
     if server != 'none':
         if server == 'Testing':
             # Use servername starting with "UAT" for testing
-            sql_query += "AND lsr.servername LIKE 'UAT%' "
+            sql_query += "AND lsr.servername LIKE 'UAT%%' "
         elif server == 'Production':
             # Use servername starting with "PROD" for production
-            sql_query += "AND lsr.servername LIKE 'PROD%' "
+            sql_query += "AND lsr.servername LIKE 'PROD%%' "
 
     sql_query += "GROUP BY date_trunc('minute', lsr.stamp), lsd.status"
 
     query_params = (start_timestamp, end_timestamp, pq_clientid) if pq_clientid != 'None' else (
     start_timestamp, end_timestamp)
 
+    print("query_params:"+str(query_params))
     return execute_and_cache_query('minute_breakdown', pq_clientid, timestamp, sql_query, 'pq_clientid',
                                    'Online Rating Request per Minute: {}'.format(timestamp), 'Timestamp',
                                    'Total Number', query_params)
 
-@app.route('/graph_data/client', defaults={'pq_clientid': None})
-@app.route('/graph_data/client/<pq_clientid>')
+
+@app.route('/graph_data_client/<pq_clientid>/<server>')
 @limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
-def graph_data(pq_clientid):
+def graph_data(pq_clientid,server):
     print("graph_data")
     print(pq_clientid)
-
-    #input_string = request.args.get('pq_clientid', None)  # Get the pq_clientid from the query string
-    words = pq_clientid.split("-")
-
-    pq_clientid =  words[0]  # "none"
-    if len(words) > 1:
-        server = words[1]  # "none"
-    else:
-        server = "none"
 
     # SQL query string
     sql_query = (
@@ -162,26 +154,29 @@ def graph_data(pq_clientid):
         "WHERE lsr.stamp >= NOW() - INTERVAL '24 hours' "
     )
 
+    query_params = []
+
     if pq_clientid != 'None':
         sql_query += "AND lsr.pq_clientid = %s "
+        query_params.append(pq_clientid)
 
     if server != 'None':
         if server == 'Testing':
             # Use servername starting with "UAT" for testing
-            sql_query += "AND lsr.servername LIKE 'UAT%' "
+            sql_query += "AND lsr.servername LIKE 'UAT%%' "
         elif server == 'Production':
             # Use servername starting with "PROD" for production
-            sql_query += "AND lsr.servername LIKE 'PROD%' "
+            sql_query += "AND lsr.servername LIKE 'PROD%%' "
 
     sql_query += "GROUP BY date_trunc('hour', lsr.stamp), lsd.status"
 
     return execute_and_cache_query('graph_data', pq_clientid, None, sql_query, 'pq_clientid',
-                                   'Requests by Hour for last 24 hours', 'Hour', 'Total Requests')
+                                   'Requests by Hour for last 24 hours', 'Hour', 'Total Requests', tuple(query_params))
 
 
 from datetime import datetime, timedelta
 
-@app.route('/graph_data/<timestamp>/<status>/<server>')
+@app.route('/minute_breakdown/<timestamp>/<status>/<server>')
 @limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
 def minute_breakdown_details(timestamp, status, server):
     # And for /graph_data/<timestamp>

@@ -120,23 +120,25 @@
 <script>
     // Function to load the initial bar graph data
     var isViewingDetailedData = false;
+    var lastEncodedTimestamp = '';
+    var lastStatus = '';
 
     function loadBarGraph() {
+        console.log('Loading bar graph data...');
         var dropdown = document.getElementById('broker-dropdown');
         var selectedBroker = dropdown.value;  // Get the selected broker pq_clientid
         if (selectedBroker === '') {
             selectedBroker = 'None';
         }
-        console.log(selectedBroker);
 
         var dropdownServer = document.getElementById('server-dropdown');
         var selectedServer = dropdownServer.value;  // Get the selected server
 
-        console.log('Selected server: ' + selectedBroker);
+        console.log('Selected Broker: ' + selectedBroker);
         if (!isViewingDetailedData) {
             // Include selectedBroker in the URL only when it is not 'None'
-            //var url = '/graph_data/client/' + (selectedBroker !== 'None' ? selectedBroker : '');
-            var url = '/graph_data/client/' + selectedBroker + '-' + selectedServer;
+            //var url = '/graph_data_client/' + (selectedBroker !== 'None' ? selectedBroker : '');
+            var url = '/graph_data_client/' + selectedBroker + '/' + selectedServer;
             console.log('url:' + url);
             fetch(url)
                 .then(response => response.json())
@@ -186,7 +188,7 @@
                 // Get the status from the trace name
                 var status = data[traceIndex].name;
                 console.log('Status: ' + selectedServer);
-                fetch('/graph_data/' + encodedTimestamp + '/' + status + '/' + selectedServer)
+                fetch('/minute_breakdown/' + encodedTimestamp + '/' + status + '/' + selectedServer)
                     .then(response => response.json())
                     .then(data => {
                         var minuteDetailList = document.getElementById('minute-detail-list');
@@ -230,7 +232,10 @@
                     });
             } else {
                 isViewingDetailedData = true;
-                url = '/graph_data/' + encodedTimestamp + '?pq_clientid=' + selectedBroker+"-production";
+                console.log('Loading minute detail data...');
+                var dropdownServer = document.getElementById('server-dropdown');
+                var selectedServer = dropdownServer.value;  // Get the selected server
+                url = '/graph_data/' + encodedTimestamp + '?pq_clientid=' + selectedBroker+"-"+selectedServer;
                 fetch(url)
                     .then(response => response.json())
                     .then(data => {
