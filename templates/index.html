@@ -396,37 +396,23 @@
         document.getElementById(tabId + '-button').classList.add('active');
     }
 
-
-    document.addEventListener('DOMContentLoaded', function() {
-       loadBrokers();
-        loadBarGraph();
-
-        var backButton = document.getElementById('back-button');
-        backButton.addEventListener('click', handleBackButtonClick);
-
-        var mainTab = document.getElementById('request-per-hour-button');
-        mainTab.addEventListener('click', handleBackButtonClick);
-
-        var dropdown = document.getElementById('broker-dropdown');
-        dropdown.addEventListener('change', refilter);
-
+    function handleServerDropDownChange() {
         var serverDropdown = document.getElementById('server-dropdown');
-        serverDropdown.addEventListener('change', function() {
-            var selectedServer = serverDropdown.value;
-            console.log('Selected Server:', selectedServer);
-                    // Clear the contentContainer
-            var detailsContainer = document.getElementById('minute-detail-list');
-            detailsContainer.innerHTML = '';
 
-            // Clear the file-content
-            var fileContentDiv = document.getElementById('file-content');
-            fileContentDiv.innerHTML = '';
+        var selectedServer = serverDropdown.value;
+        console.log('Selected Server:', selectedServer);
+        // Clear the contentContainer
+        var detailsContainer = document.getElementById('minute-detail-list');
+        detailsContainer.innerHTML = '';
 
-            loadBarGraph();
-            // Perform actions based on the selected server value
-            // For example, you can reload data specific to the selected server
-        });
-    });
+        // Clear the file-content
+        var fileContentDiv = document.getElementById('file-content');
+        fileContentDiv.innerHTML = '';
+
+        loadBarGraph();
+        // Perform actions based on the selected server value
+        // For example, you can reload data specific to the selected server
+    }
 
     function refilter(){
         console.log('Refiltering data');
@@ -479,6 +465,23 @@
             });
     }
 
+
+    document.addEventListener('DOMContentLoaded', function() {
+       loadBrokers();
+        loadBarGraph();
+
+        var backButton = document.getElementById('back-button');
+        backButton.addEventListener('click', handleBackButtonClick);
+
+        var mainTab = document.getElementById('request-per-hour-button');
+        mainTab.addEventListener('click', handleBackButtonClick);
+
+        var dropdown = document.getElementById('broker-dropdown');
+        dropdown.addEventListener('change', refilter);
+
+        var serverDropdown = document.getElementById('server-dropdown');
+        serverDropdown.addEventListener('change', handleServerDropDownChange);
+    });
 
 </script>
 </body>
