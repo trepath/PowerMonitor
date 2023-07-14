@@ -128,6 +128,10 @@
             selectedBroker = 'None';
         }
         console.log(selectedBroker);
+
+        var dropdownServer = document.getElementById('server-dropdown');
+        var selectedServer = dropdown.value;  // Get the selected server
+
         if (!isViewingDetailedData) {
             // Include selectedBroker in the URL only when it is not 'None'
             //var url = '/graph_data/client/' + (selectedBroker !== 'None' ? selectedBroker : '');
@@ -169,6 +173,9 @@
             if (selectedBroker === '') {
                 selectedBroker = 'None';
             }
+
+            var dropdownServer = document.getElementById('server-dropdown');
+            var selectedServer = dropdown.value;  // Get the selected server
 
             if (isViewingDetailedData) {
                 // Get the Plotly figure

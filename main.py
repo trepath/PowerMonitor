@@ -95,7 +95,10 @@ def minute_breakdown(timestamp):
     words = input_string.split("-")
 
     pq_clientid =  words[0]  # "none"
-    server = words[1]  # "none"
+    if len(words) > 1:
+        server = words[1]  # "none"
+    else:
+        server = "none"
 
     #pq_clientid = request.args.get('pq_clientid', None)  # Get the pq_clientid from the query string
     print(cache['minute_breakdown'])
@@ -135,6 +138,14 @@ def minute_breakdown(timestamp):
 
     if pq_clientid != 'None':
         sql_query += "AND lsr.pq_clientid = %s "
+
+    if server != 'none':
+        if server == 'Testing':
+            # Use servername starting with "UAT" for testing
+            sql_query += "AND lsr.servername LIKE 'UAT%' "
+        elif server == 'Production':
+            # Use servername starting with "PROD" for production
+            sql_query += "AND lsr.servername LIKE 'PROD%' "
 
     sql_query += "GROUP BY date_trunc('minute', lsr.stamp), lsd.status"
 
@@ -190,6 +201,16 @@ def minute_breakdown(timestamp):
 def graph_data(pq_clientid):
     print("graph_data")
     print(pq_clientid)
+
+    #input_string = request.args.get('pq_clientid', None)  # Get the pq_clientid from the query string
+    words = pq_clientid.split("-")
+
+    pq_clientid =  words[0]  # "none"
+    if len(words) > 1:
+        server = words[1]  # "none"
+    else:
+        server = "none"
+
     if cache['graph_data']['pq_clientid'] == pq_clientid and cache['graph_data']['timestamp'] and time.time() - cache['graph_data']['timestamp'] < 60:
         print("cache")
         return cache['graph_data']['data']
@@ -215,6 +236,14 @@ def graph_data(pq_clientid):
 
     if pq_clientid != 'None':
         sql_query += "AND lsr.pq_clientid = %s "
+
+    if server != 'none':
+        if server == 'Testing':
+            # Use servername starting with "UAT" for testing
+            sql_query += "AND lsr.servername LIKE 'UAT%' "
+        elif server == 'Production':
+            # Use servername starting with "PROD" for production
+            sql_query += "AND lsr.servername LIKE 'PROD%' "
 
     sql_query += "GROUP BY date_trunc('hour', lsr.stamp), lsd.status"
 
