@@ -176,7 +176,7 @@
             }
 
             var dropdownServer = document.getElementById('server-dropdown');
-            var selectedServer = dropdown.value;  // Get the selected server
+            var selectedServer = dropdownServer.value;  // Get the selected server
 
             if (isViewingDetailedData) {
                 // Get the Plotly figure
@@ -185,8 +185,8 @@
 
                 // Get the status from the trace name
                 var status = data[traceIndex].name;
-
-                fetch('/graph_data/' + encodedTimestamp + '/' + status)
+                console.log('Status: ' + selectedServer);
+                fetch('/graph_data/' + encodedTimestamp + '/' + status + '/' + selectedServer)
                     .then(response => response.json())
                     .then(data => {
                         var minuteDetailList = document.getElementById('minute-detail-list');

@@ -181,13 +181,13 @@ def graph_data(pq_clientid):
 
 from datetime import datetime, timedelta
 
-@app.route('/graph_data/<timestamp>/<status>')
+@app.route('/graph_data/<timestamp>/<status>/<server>')
 @limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
-def minute_breakdown_details(timestamp, status):
+def minute_breakdown_details(timestamp, status, server):
     # And for /graph_data/<timestamp>
     #if cache['minute_breakdown_details']['timestamp'] and time.time() - cache['minute_breakdown_details']['timestamp'] < 60:
     #    return cache['minute_breakdown']['data']
-
+    print("minute_breakdown_details " + timestamp + " " + status + " " + server)
     # Connect to the PostgreSQL server
     conn = psycopg2.connect(
         host=DB_HOST,
@@ -213,17 +213,31 @@ def minute_breakdown_details(timestamp, status):
     status_labels_reverse = {v: k for k, v in status_labels.items()}
     # Convert the status string to a status code
     status = status_labels_reverse[status]
-
-    cursor.execute(
+    print("status " + str(status))
+    # SQL query string
+    sql_query = (
         "SELECT date_trunc('minute', lsr.stamp) as minute, lsd.status as status, lsd.insurer as insurer, lsd.responsetime as responsetime, lsd.responsefile as responsefile, "
         "lsd.requestfile as requestfile, lsr.requestfile as sr_requestfile, lsr.responsefile as sr_responsefile, lsr.lob as lob, lsr.servername as servername, lsr.subbrokerid as subbrokerid, "
         "lsr.prov as prov, lsr.quotenumber as quotenumber, lsr.pq_clientid as pq_clientid, b.brokername as brokername "
         "FROM log_service_requests AS lsr "
         "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
         "JOIN broker AS b ON lsr.pq_clientid = b.pq_clientid "
-        "WHERE lsr.stamp >= %s and lsr.stamp < %s and lsd.status = %s",
-        (start_timestamp, end_timestamp, status)
+        "WHERE lsr.stamp >= %s and lsr.stamp < %s and lsd.status = %s"
     )
+
+    print(server)
+
+    if server != 'None':
+        if server == 'Testing':
+            # Use servername starting with "UAT" for testing
+            sql_query += " AND lsr.servername LIKE 'UAT%%' "
+        elif server == 'Production':
+            # Use servername starting with "PROD" for production
+            sql_query += " AND lsr.servername LIKE 'PROD%%' "
+
+    print(sql_query)
+    print((start_timestamp, end_timestamp, status))
+    cursor.execute(sql_query, (start_timestamp, end_timestamp, status))
 
     results = cursor.fetchall()
 
