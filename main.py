@@ -271,8 +271,9 @@ def process_file_location():
 
     # Return the file for download
     return send_file(responsefile_path, as_attachment=True)
-@app.route('/brokers')
-def brokers():
+@app.route('/brokers/<server>')
+def brokers(server):
+    print("brokers " + server)
     conn = psycopg2.connect(
         host=DB_HOST,
         database=DB_NAME,
@@ -280,13 +281,25 @@ def brokers():
         password=DB_PASS
     )
     cursor = conn.cursor()
-    cursor.execute(
+
+    sql_query = (
         "SELECT DISTINCT broker.brokername, broker.pq_clientid "
         "FROM broker "
         "JOIN log_service_requests AS lsr ON broker.pq_clientid = lsr.pq_clientid "
         "WHERE lsr.stamp >= NOW() - INTERVAL '24 hours' "
-        "ORDER BY broker.brokername ASC"
     )
+
+    if server != 'None':
+        if server == 'Testing':
+            # Use servername starting with "UAT" for testing
+            sql_query += " AND lsr.servername LIKE 'UAT%%' "
+        elif server == 'Production':
+            # Use servername starting with "PROD" for production
+            sql_query += " AND lsr.servername LIKE 'PROD%%' "
+
+    sql_query += " ORDER BY broker.brokername ASC"
+
+    cursor.execute(sql_query)
 
     results = cursor.fetchall()
     print(results)

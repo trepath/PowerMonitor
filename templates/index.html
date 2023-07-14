@@ -160,6 +160,20 @@
                     width: width
                 });
             });
+        }else{
+            console.log('Loading minute detail data...');
+            var dropdownServer = document.getElementById('server-dropdown');
+            var selectedServer = dropdownServer.value;  // Get the selected server
+            url = '/graph_data/' + lastEncodedTimestamp + '?pq_clientid=' + selectedBroker+"-"+selectedServer;
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    var parsedData = JSON.parse(data);
+                    Plotly.newPlot('bar-graph', parsedData.data, parsedData.layout)
+                        .then(function(gd) {
+                            gd.on('plotly_click', handleBarClick);
+                        });
+                });
         }
     }
 
@@ -235,6 +249,7 @@
                 console.log('Loading minute detail data...');
                 var dropdownServer = document.getElementById('server-dropdown');
                 var selectedServer = dropdownServer.value;  // Get the selected server
+                lastEncodedTimestamp = encodedTimestamp;
                 url = '/graph_data/' + encodedTimestamp + '?pq_clientid=' + selectedBroker+"-"+selectedServer;
                 fetch(url)
                     .then(response => response.json())
@@ -414,6 +429,7 @@
         var fileContentDiv = document.getElementById('file-content');
         fileContentDiv.innerHTML = '';
 
+        loadBrokers();
         loadBarGraph();
         // Perform actions based on the selected server value
         // For example, you can reload data specific to the selected server
@@ -431,6 +447,27 @@
         fileContentDiv.innerHTML = '';
 
         loadBarGraph();
+
+        console.log('Reloading minute detail data...');
+        var dropdownServer = document.getElementById('server-dropdown');
+        var selectedServer = dropdownServer.value;  // Get the selected server
+
+        var dropdown = document.getElementById('broker-dropdown');
+        var selectedBroker = dropdown.value;  // Get the selected broker pq_clientid
+        if (selectedBroker === '') {
+            selectedBroker = 'None';
+        }
+
+        url = '/graph_data/' + lastEncodedTimestamp + '?pq_clientid=' + selectedBroker+"-"+selectedServer;
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                var parsedData = JSON.parse(data);
+                Plotly.newPlot('bar-graph', parsedData.data, parsedData.layout)
+                    .then(function(gd) {
+                        gd.on('plotly_click', handleBarClick);
+                    });
+            });
     }
 
     // Function to copy file contents to clipboard
@@ -446,7 +483,10 @@
     }
 
     function loadBrokers() {
-        fetch('/brokers')
+        var dropdownServer = document.getElementById('server-dropdown');
+        var selectedServer = dropdownServer.value;  // Get the selected server
+
+        fetch('/brokers/'+selectedServer)
             .then(response => response.json())
             .then(data => {
             console.log('Brokers:', data);
@@ -472,7 +512,7 @@
 
 
     document.addEventListener('DOMContentLoaded', function() {
-       loadBrokers();
+        loadBrokers();
         loadBarGraph();
 
         var backButton = document.getElementById('back-button');
