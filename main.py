@@ -100,24 +100,6 @@ def minute_breakdown(timestamp):
     else:
         server = "none"
 
-    #pq_clientid = request.args.get('pq_clientid', None)  # Get the pq_clientid from the query string
-    print(cache['minute_breakdown'])
-    if cache['minute_breakdown']['pq_clientid'] == pq_clientid and cache['minute_breakdown'][
-        'timestamp'] == timestamp and time.time() - cache['minute_breakdown']['current_time'] < 60:
-        print("Using cached data")
-        return cache['minute_breakdown']['data']
-
-    # Connect to the PostgreSQL server
-    conn = psycopg2.connect(
-        host=DB_HOST,
-        database=DB_NAME,
-        user=DB_USER,
-        password=DB_PASS
-    )
-
-    # Create a cursor to execute queries
-    cursor = conn.cursor()
-
     # Trim any leading or trailing spaces
     timestamp = timestamp.strip()
 
@@ -149,51 +131,12 @@ def minute_breakdown(timestamp):
 
     sql_query += "GROUP BY date_trunc('minute', lsr.stamp), lsd.status"
 
-    if pq_clientid != 'None':
-        cursor.execute(sql_query, (start_timestamp, end_timestamp, pq_clientid))
-    else:
-        cursor.execute(sql_query, (start_timestamp, end_timestamp))
+    query_params = (start_timestamp, end_timestamp, pq_clientid) if pq_clientid != 'None' else (
+    start_timestamp, end_timestamp)
 
-    results = cursor.fetchall()
-
-    # Extract minutes, statuses, and values from the results
-    minutes, statuses, values = zip(*results)
-
-    # Create a dictionary mapping minutes to dictionaries that map statuses to values
-    data = {}
-    for minute, status, value in results:
-        if minute not in data:
-            data[minute] = {}
-        data[minute][status] = value
-
-    # Close the cursor and the connection
-    cursor.close()
-    conn.close()
-
-    # Create the per-minute breakdown graph using Plotly
-    fig = go.Figure(data=[
-        go.Bar(
-            name=status_labels.get(status, str(status)),
-            x=list(data.keys()),
-            y=[data[minute].get(status, 0) for minute in data],
-            marker_color=status_colors.get(status, 'rgb(128, 128, 128)'))
-        # default color if status is not in the dictionary
-        for status in set(statuses)
-    ])
-
-    # Configure the layout of the per-minute breakdown graph
-    fig.update_layout(
-        barmode='stack',
-        title='Online Rating Request per Minute: {}'.format(timestamp),
-        xaxis_title='Timestamp',
-        yaxis_title='Total Number'
-    )
-
-    cache['minute_breakdown']['pq_clientid'] = pq_clientid
-    cache['minute_breakdown']['timestamp'] = timestamp
-    cache['minute_breakdown']['current_time'] = time.time()
-    cache['minute_breakdown']['data'] = jsonify(fig.to_json())
-    return cache['minute_breakdown']['data']
+    return execute_and_cache_query('minute_breakdown', pq_clientid, timestamp, sql_query, 'pq_clientid',
+                                   'Online Rating Request per Minute: {}'.format(timestamp), 'Timestamp',
+                                   'Total Number', query_params)
 
 @app.route('/graph_data/client', defaults={'pq_clientid': None})
 @app.route('/graph_data/client/<pq_clientid>')
@@ -210,7 +153,6 @@ def graph_data(pq_clientid):
         server = words[1]  # "none"
     else:
         server = "none"
-
 
     # SQL query string
     sql_query = (
@@ -233,66 +175,9 @@ def graph_data(pq_clientid):
 
     sql_query += "GROUP BY date_trunc('hour', lsr.stamp), lsd.status"
 
-    print(sql_query)
-    if cache['graph_data']['pq_clientid'] == pq_clientid and cache['graph_data']['sql_query'] == sql_query and time.time() - cache['graph_data']['timestamp'] < 60:
-        print("cache")
-        return cache['graph_data']['data']
+    return execute_and_cache_query('graph_data', pq_clientid, None, sql_query, 'pq_clientid',
+                                   'Requests by Hour for last 24 hours', 'Hour', 'Total Requests')
 
-    # Connect to the PostgreSQL server
-    conn = psycopg2.connect(
-        host=DB_HOST,
-        database=DB_NAME,
-        user=DB_USER,
-        password=DB_PASS
-    )
-
-    # Create a cursor to execute queries
-    cursor = conn.cursor()
-
-    cursor.execute(sql_query)
-
-    print("Query: " + sql_query)
-
-    results = cursor.fetchall()
-
-    print(sql_query)
-    print(results)
-    # Extract timestamps, statuses, and values from the results
-    timestamps, statuses, values = zip(*results)
-
-    # Create a dictionary mapping timestamps to dictionaries that map statuses to values
-    data = {}
-    for timestamp, status, value in results:
-        if timestamp not in data:
-            data[timestamp] = {}
-        data[timestamp][status] = value
-
-    # Close the cursor and the connection
-    cursor.close()
-    conn.close()
-
-    # Create the stacked bar graph using Plotly
-    fig = go.Figure(data=[
-        go.Bar(name=status_labels.get(status, status), x=list(data.keys()),
-               y=[data[timestamp].get(status, 0) for timestamp in data],
-               marker_color=status_colors.get(status, 'rgb(128, 128, 128)')) # default color if status is not in the dictionary
-        for status in set(statuses)
-    ])
-
-    # Configure the layout of the bar graph
-    fig.update_layout(
-        barmode='stack',
-        title='Requests by Hour for last 24 hours',
-        xaxis_title='Hour',
-        yaxis_title='Total Requests'
-    )
-
-    # At the end of the function, when storing the results in the cache, also store the SQL query
-    cache['graph_data']['pq_clientid'] = pq_clientid
-    cache['graph_data']['sql_query'] = sql_query
-    cache['graph_data']['timestamp'] = time.time()
-    cache['graph_data']['data'] = jsonify(fig.to_json())
-    return cache['graph_data']['data']
 
 from datetime import datetime, timedelta
 
@@ -397,6 +282,67 @@ def brokers():
     results = cursor.fetchall()
     print(results)
     return jsonify(results)
+
+def execute_and_cache_query(route, pq_clientid, timestamp, sql_query, cache_key, plot_title, xaxis_title, yaxis_title, query_params=None):
+
+    if cache[route][cache_key] == pq_clientid and cache[route]['sql_query'] == sql_query and time.time() - cache[route]['timestamp'] < 60:
+        print("Using cached data")
+        return cache[route]['data']
+
+    # Connect to the PostgreSQL server
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS
+    )
+
+    # Create a cursor to execute queries
+    cursor = conn.cursor()
+
+    if query_params:
+        cursor.execute(sql_query, query_params)
+    else:
+        cursor.execute(sql_query)
+
+    results = cursor.fetchall()
+
+    # Extract timestamps, statuses, and values from the results
+    timestamps, statuses, values = zip(*results)
+
+    # Create a dictionary mapping timestamps to dictionaries that map statuses to values
+    data = {}
+    for timestamp, status, value in results:
+        if timestamp not in data:
+            data[timestamp] = {}
+        data[timestamp][status] = value
+
+    # Close the cursor and the connection
+    cursor.close()
+    conn.close()
+
+    # Create the stacked bar graph using Plotly
+    fig = go.Figure(data=[
+        go.Bar(name=status_labels.get(status, status), x=list(data.keys()),
+               y=[data[timestamp].get(status, 0) for timestamp in data],
+               marker_color=status_colors.get(status, 'rgb(128, 128, 128)')) # default color if status is not in the dictionary
+        for status in set(statuses)
+    ])
+
+    # Configure the layout of the bar graph
+    fig.update_layout(
+        barmode='stack',
+        title=plot_title,
+        xaxis_title=xaxis_title,
+        yaxis_title=yaxis_title
+    )
+
+    # At the end of the function, when storing the results in the cache, also store the SQL query
+    cache[route][cache_key] = pq_clientid
+    cache[route]['sql_query'] = sql_query
+    cache[route]['timestamp'] = time.time()
+    cache[route]['data'] = jsonify(fig.to_json())
+    return cache[route]['data']
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
