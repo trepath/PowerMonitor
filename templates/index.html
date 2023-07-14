@@ -101,8 +101,8 @@
         <div id="bar-graph" class="rounder_corner"></div>
         <button id="back-button">Back</button>
         <select id="server-dropdown">
-            <option value="Production Servers">Production</option>
-            <option value="Testing Servers">Testing</option>
+            <option value="Production">Production</option>
+            <option value="Testing">Testing</option>
         </select>
         <select id="broker-dropdown">
             <!-- Broker options will be populated here by JavaScript -->
@@ -130,12 +130,13 @@
         console.log(selectedBroker);
 
         var dropdownServer = document.getElementById('server-dropdown');
-        var selectedServer = dropdown.value;  // Get the selected server
+        var selectedServer = dropdownServer.value;  // Get the selected server
 
+        console.log('Selected server: ' + selectedBroker);
         if (!isViewingDetailedData) {
             // Include selectedBroker in the URL only when it is not 'None'
             //var url = '/graph_data/client/' + (selectedBroker !== 'None' ? selectedBroker : '');
-            var url = '/graph_data/client/' + selectedBroker;
+            var url = '/graph_data/client/' + selectedBroker + '-' + selectedServer;
             console.log('url:' + url);
             fetch(url)
                 .then(response => response.json())
@@ -415,6 +416,7 @@
         serverDropdown.addEventListener('change', function() {
             var selectedServer = serverDropdown.value;
             console.log('Selected Server:', selectedServer);
+            refilter();
             // Perform actions based on the selected server value
             // For example, you can reload data specific to the selected server
         });

@@ -211,7 +211,30 @@ def graph_data(pq_clientid):
     else:
         server = "none"
 
-    if cache['graph_data']['pq_clientid'] == pq_clientid and cache['graph_data']['timestamp'] and time.time() - cache['graph_data']['timestamp'] < 60:
+
+    # SQL query string
+    sql_query = (
+        "SELECT date_trunc('hour', lsr.stamp), lsd.status, COUNT(*) "
+        "FROM log_service_requests AS lsr "
+        "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
+        "WHERE lsr.stamp >= NOW() - INTERVAL '24 hours' "
+    )
+
+    if pq_clientid != 'None':
+        sql_query += "AND lsr.pq_clientid = %s "
+
+    if server != 'None':
+        if server == 'Testing':
+            # Use servername starting with "UAT" for testing
+            sql_query += "AND lsr.servername LIKE 'UAT%' "
+        elif server == 'Production':
+            # Use servername starting with "PROD" for production
+            sql_query += "AND lsr.servername LIKE 'PROD%' "
+
+    sql_query += "GROUP BY date_trunc('hour', lsr.stamp), lsd.status"
+
+    print(sql_query)
+    if cache['graph_data']['pq_clientid'] == pq_clientid and cache['graph_data']['sql_query'] == sql_query and time.time() - cache['graph_data']['timestamp'] < 60:
         print("cache")
         return cache['graph_data']['data']
 
@@ -226,31 +249,7 @@ def graph_data(pq_clientid):
     # Create a cursor to execute queries
     cursor = conn.cursor()
 
-    # SQL query string
-    sql_query = (
-        "SELECT date_trunc('hour', lsr.stamp), lsd.status, COUNT(*) "
-        "FROM log_service_requests AS lsr "
-        "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
-        "WHERE lsr.stamp >= NOW() - INTERVAL '24 hours' "
-    )
-
-    if pq_clientid != 'None':
-        sql_query += "AND lsr.pq_clientid = %s "
-
-    if server != 'none':
-        if server == 'Testing':
-            # Use servername starting with "UAT" for testing
-            sql_query += "AND lsr.servername LIKE 'UAT%' "
-        elif server == 'Production':
-            # Use servername starting with "PROD" for production
-            sql_query += "AND lsr.servername LIKE 'PROD%' "
-
-    sql_query += "GROUP BY date_trunc('hour', lsr.stamp), lsd.status"
-
-    if pq_clientid:
-        cursor.execute(sql_query, (pq_clientid,))
-    else:
-        cursor.execute(sql_query)
+    cursor.execute(sql_query)
 
     print("Query: " + sql_query)
 
@@ -288,13 +287,12 @@ def graph_data(pq_clientid):
         yaxis_title='Total Requests'
     )
 
+    # At the end of the function, when storing the results in the cache, also store the SQL query
     cache['graph_data']['pq_clientid'] = pq_clientid
+    cache['graph_data']['sql_query'] = sql_query
     cache['graph_data']['timestamp'] = time.time()
     cache['graph_data']['data'] = jsonify(fig.to_json())
     return cache['graph_data']['data']
-
-    # Convert the figure to JSON and return the data
-    return jsonify(fig.to_json())
 
 from datetime import datetime, timedelta
 
