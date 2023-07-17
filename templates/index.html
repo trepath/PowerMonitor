@@ -567,16 +567,16 @@
             selectedBroker = 'None';
         }
 
-        url = '/graph_data/' + lastEncodedTimestamp + '?pq_clientid=' + selectedBroker+"-"+selectedServer;
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                var parsedData = JSON.parse(data);
-                Plotly.newPlot('bar-graph', parsedData.data, parsedData.layout)
-                    .then(function(gd) {
-                        gd.on('plotly_click', handleBarClick);
-                    });
-            });
+        //url = '/graph_data/' + lastEncodedTimestamp + '?pq_clientid=' + selectedBroker+"-"+selectedServer;
+        //fetch(url)
+        //    .then(response => response.json())
+        //    .then(data => {
+        //        var parsedData = JSON.parse(data);
+        //        Plotly.newPlot('bar-graph', parsedData.data, parsedData.layout)
+        //            .then(function(gd) {
+        //                gd.on('plotly_click', handleBarClick);
+        //            });
+        //    });
     }
 
     // Function to copy file contents to clipboard

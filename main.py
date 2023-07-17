@@ -2,6 +2,7 @@ import configparser
 import os
 import time
 
+import pandas as pd
 import psycopg2
 import plotly.graph_objects as go
 from flask import Flask, render_template, jsonify, send_file, request, abort
@@ -66,7 +67,6 @@ cache = {
     },
 }
 
-
 # Create Flask web server
 app = Flask(__name__)
 
@@ -75,7 +75,6 @@ limiter = Limiter(
     app,
     default_limits=["200 per day", "50 per hour"]  # Limit each client to 200 requests per day and 50 requests per hour
 )
-
 
 
 @app.route('/')
@@ -98,7 +97,7 @@ def minute_breakdown(timestamp):
     input_string = request.args.get('pq_clientid', None)  # Get the pq_clientid from the query string
     words = input_string.split("-")
 
-    pq_clientid =  words[0]  # "none"
+    pq_clientid = words[0]  # "none"
     if len(words) > 1:
         server = words[1]  # "none"
     else:
@@ -136,17 +135,18 @@ def minute_breakdown(timestamp):
     sql_query += "GROUP BY date_trunc('minute', lsr.stamp), lsd.status"
 
     query_params = (start_timestamp, end_timestamp, pq_clientid) if pq_clientid != 'None' else (
-    start_timestamp, end_timestamp)
+        start_timestamp, end_timestamp)
 
-    print("query_params:"+str(query_params))
+    print("query_params:" + str(query_params))
+
     return execute_and_cache_query('minute_breakdown', pq_clientid, timestamp, sql_query, 'pq_clientid',
                                    server + ' JAWS Requests At: {}'.format(timestamp), 'Timestamp',
-                                   'Total Number', query_params)
+                                   'Total Number', start_timestamp, end_timestamp, query_params)
 
 
 @app.route('/graph_data_client/<pq_clientid>/<server>')
 @limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
-def graph_data(pq_clientid,server):
+def graph_data(pq_clientid, server):
     print("graph_data")
     print(pq_clientid)
 
@@ -174,17 +174,23 @@ def graph_data(pq_clientid,server):
 
     sql_query += "GROUP BY date_trunc('hour', lsr.stamp), lsd.status"
 
+    # Starttime stamp is 24hrs ago now
+    start_timestamp = datetime.now() - timedelta(hours=24)
+    end_timestamp = datetime.now()
+
     return execute_and_cache_query('graph_data', pq_clientid, None, sql_query, 'pq_clientid',
-                                   server + ' JAWS Requests for last 24 hours', 'Hour', 'Total Requests', tuple(query_params))
+                                   server + ' JAWS Requests for last 24 hours', 'Hour', 'Total Requests',
+                                   start_timestamp, end_timestamp, tuple(query_params))
 
 
 from datetime import datetime, timedelta
+
 
 @app.route('/minute_breakdown/<timestamp>/<status>/<server>')
 @limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
 def minute_breakdown_details(timestamp, status, server):
     # And for /graph_data/<timestamp>
-    #if cache['minute_breakdown_details']['timestamp'] and time.time() - cache['minute_breakdown_details']['timestamp'] < 60:
+    # if cache['minute_breakdown_details']['timestamp'] and time.time() - cache['minute_breakdown_details']['timestamp'] < 60:
     #    return cache['minute_breakdown']['data']
     print("minute_breakdown_details " + timestamp + " " + status + " " + server)
     # Connect to the PostgreSQL server
@@ -206,10 +212,10 @@ def minute_breakdown_details(timestamp, status, server):
 
     # Calculate the start and end timestamps for the selected hour
     start_timestamp = timestamp_datetime
-    #end_timestamp = start_timestamp + timedelta(hours=1)
+    # end_timestamp = start_timestamp + timedelta(hours=1)
     end_timestamp = start_timestamp + timedelta(minutes=1)
 
-    #Reverse the status label dictionary
+    # Reverse the status label dictionary
     status_labels_reverse = {v: k for k, v in status_labels.items()}
     # Convert the status string to a status code
     status = status_labels_reverse[status]
@@ -255,6 +261,7 @@ def minute_breakdown_details(timestamp, status, server):
     # Return JSON representation of the result_list
     return jsonify(result_list)
 
+
 @app.route('/process_file_location', methods=['POST'])
 @limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
 def process_file_location():
@@ -276,6 +283,8 @@ def process_file_location():
 
     # Return the file for download
     return send_file(responsefile_path, as_attachment=True)
+
+
 @app.route('/brokers/<server>')
 @limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
 def brokers(server):
@@ -311,9 +320,11 @@ def brokers(server):
     print(results)
     return jsonify(results)
 
-def execute_and_cache_query(route, pq_clientid, timestamp, sql_query, cache_key, plot_title, xaxis_title, yaxis_title, query_params=None):
 
-    if cache[route][cache_key] == pq_clientid and cache[route]['sql_query'] == sql_query and time.time() - cache[route]['timestamp'] < 60:
+def execute_and_cache_query(route, pq_clientid, timestamp, sql_query, cache_key, plot_title, xaxis_title, yaxis_title,
+                            start_timestamp, end_timestamp, query_params=None):
+    if cache[route][cache_key] == pq_clientid and cache[route]['sql_query'] == sql_query and time.time() - cache[route][
+        'timestamp'] < 60:
         print("Using cached data")
         return cache[route]['data']
 
@@ -353,7 +364,8 @@ def execute_and_cache_query(route, pq_clientid, timestamp, sql_query, cache_key,
     fig = go.Figure(data=[
         go.Bar(name=status_labels.get(status, status), x=list(data.keys()),
                y=[data[timestamp].get(status, 0) for timestamp in data],
-               marker_color=status_colors.get(status, 'rgb(128, 128, 128)')) # default color if status is not in the dictionary
+               marker_color=status_colors.get(status, 'rgb(128, 128, 128)'))
+        # default color if status is not in the dictionary
         for status in set(statuses)
     ])
 
@@ -368,12 +380,47 @@ def execute_and_cache_query(route, pq_clientid, timestamp, sql_query, cache_key,
             xaxis=dict(range=[query_params[0], query_params[1]])
         )
     else:
+        # If the start and end timestamps are more than 2 hours apart, set the tick interval to 1 hour
+        if (end_timestamp - start_timestamp).total_seconds() > 7200:
+            tick_interval = 'H'
+            # Get all timestamps within the desired range
+            timestamp_range = pd.date_range(start=start_timestamp, end=end_timestamp, freq=tick_interval)
+            print(timestamp_range)
+
+            # set the xaxis dictionary to include the tickformat
+            xaxis_dict = dict(
+                tickmode='array',  # Set the tick mode to custom
+                tickvals=timestamp_range,  # Set the tick values to cover the desired range
+                ticktext=[timestamp.strftime('%H:00') for timestamp in timestamp_range],
+                dtick=1
+            )
+
+        else:
+            tick_interval = 'min'
+            # Get all timestamps within the desired range
+            timestamp_range = pd.date_range(start=start_timestamp, end=end_timestamp, freq=tick_interval)
+            print(timestamp_range)
+
+            # set the xaxis dictionary to include the tickformat
+            xaxis_dict = dict(
+                tickmode='array',  # Set the tick mode to custom
+                tickvals=timestamp_range,  # Set the tick values to cover the desired range
+                ticktext=[timestamp.strftime('%H:%M') for timestamp in timestamp_range],
+                dtick=1
+            )
+
+        # Get the corresponding data values for each timestamp
+        data_values = [data[timestamp][status] if timestamp in data and status in data[timestamp] else 0
+                       for timestamp in timestamp_range
+                       for status in set(statuses)]
+
         # Configure the layout of the bar graph
         fig.update_layout(
             barmode='stack',
             title=plot_title,
             xaxis_title=xaxis_title,
             yaxis_title=yaxis_title,
+            xaxis=xaxis_dict
         )
 
     # At the end of the function, when storing the results in the cache, also store the SQL query
@@ -444,8 +491,9 @@ def graph_data_last_hour():
     fig = go.Figure(data=[
         go.Bar(name=status_labels.get(status, status), y=list(data.keys()),
                x=[data[insurer].get(status, 0) for insurer in data],
-               orientation='h', # this makes the graph horizontal
-               marker_color=status_colors.get(status, 'rgb(128, 128, 128)')) # default color if status is not in the dictionary
+               orientation='h',  # this makes the graph horizontal
+               marker_color=status_colors.get(status, 'rgb(128, 128, 128)'))
+        # default color if status is not in the dictionary
         for status in set(statuses)
     ])
 
@@ -463,19 +511,21 @@ def graph_data_last_hour():
 
     return cache['last_hour_graph_data']['data']
 
+
 from datetime import datetime, timedelta
+
 
 @app.route('/insurer_breakdown/<duration>/<status>/<insurer>/<server>')
 @limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
 def insurer_breakdown(duration, status, insurer, server):
-    #Reverse the status label dictionary
+    # Reverse the status label dictionary
     status_labels_reverse = {v: k for k, v in status_labels.items()}
     # Convert the status string to a status code
     status = status_labels_reverse[status]
     print("status " + str(status))
 
     # And for /graph_data/<timestamp>
-    #if cache['minute_breakdown_details']['timestamp'] and time.time() - cache['minute_breakdown_details']['timestamp'] < 60:
+    # if cache['minute_breakdown_details']['timestamp'] and time.time() - cache['minute_breakdown_details']['timestamp'] < 60:
     #    return cache['minute_breakdown']['data']
     print("insurer_breakdown details: " + duration + " " + str(status) + " " + insurer + " " + server)
     # Connect to the PostgreSQL server
@@ -520,7 +570,7 @@ def insurer_breakdown(duration, status, insurer, server):
             sql_query += " AND lsr.servername LIKE 'PROD%%' "
 
     print(sql_query)
-    #cursor.execute(sql_query, (start_timestamp, end_timestamp, insurer, status))
+    # cursor.execute(sql_query, (start_timestamp, end_timestamp, insurer, status))
     cursor.execute(sql_query, (start_timestamp, end_timestamp, insurer))
 
     results = cursor.fetchall()
@@ -538,6 +588,7 @@ def insurer_breakdown(duration, status, insurer, server):
 
     # Return JSON representation of the result_list
     return jsonify(result_list)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
