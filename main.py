@@ -277,6 +277,7 @@ def process_file_location():
     # Return the file for download
     return send_file(responsefile_path, as_attachment=True)
 @app.route('/brokers/<server>')
+@limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
 def brokers(server):
     print("brokers " + server)
     conn = psycopg2.connect(
@@ -384,7 +385,10 @@ def execute_and_cache_query(route, pq_clientid, timestamp, sql_query, cache_key,
 
 
 @app.route('/graph_data_last_hour')
+@limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
 def graph_data_last_hour():
+    server = "Production"
+
     # Check the cache
     if cache['last_hour_graph_data']['timestamp'] and time.time() - cache['last_hour_graph_data']['timestamp'] < 60:
         return cache['last_hour_graph_data']['data']
@@ -406,8 +410,17 @@ def graph_data_last_hour():
         "FROM log_service_requests AS lsr "
         "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
         "WHERE lsr.stamp >= NOW() - INTERVAL '1 hour' "
-        "GROUP BY date_trunc('hour', lsr.stamp), lsd.insurer, lsd.status"
     )
+
+    if server != 'none':
+        if server == 'Testing':
+            # Use servername starting with "UAT" for testing
+            sql_query += "AND lsr.servername LIKE 'UAT%%' "
+        elif server == 'Production':
+            # Use servername starting with "PROD" for production
+            sql_query += "AND lsr.servername LIKE 'PROD%%' "
+
+    sql_query += "GROUP BY date_trunc('hour', lsr.stamp), lsd.insurer, lsd.status"
 
     cursor.execute(sql_query)
 

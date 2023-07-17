@@ -121,6 +121,12 @@
             height: 500px; /* Set the initial height */
             position: relative;
         }
+
+        #bar-graph {
+            width: 100%;
+            height: 500px; /* Set the initial height */
+            position: relative;
+        }
     </style>
 </head>
 <body>
@@ -146,6 +152,10 @@
     </div>
     <div id="company-status" class="tab">
         <div id="hourly-graph" style="width:100%;height:100%"></div>
+        <div class="container">
+            <div class="rounder_corner" id="insurer-detail-list"></div>
+            <div class="rounder_corner"  id="insurer-file-content"></div>
+        </div>
     </div>
 </div>
 
@@ -478,6 +488,8 @@
 
         document.getElementById(tabId).classList.add('active');
         document.getElementById(tabId + '-button').classList.add('active');
+
+        window.dispatchEvent(new Event('resize'));  // Dispatch resize event
     }
 
     function handleServerDropDownChange() {
@@ -591,6 +603,7 @@
                 };
 
                 Plotly.newPlot('hourly-graph', parsedData.data, layout);
+                window.dispatchEvent(new Event('resize'));  // Dispatch resize event
             });
 
         setTimeout(loadHourlyGraph, 60000);  // Call this function again after 1 minute
