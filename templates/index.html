@@ -126,7 +126,7 @@
 <body>
 <div class="tab-buttons">
     <button id="request-per-hour-button" onclick="switchTab('request-per-hour')">JAWS Server Stats</button>
-    <button id="empty-tab-button" onclick="switchTab('empty-tab')">Empty Tab</button>
+    <button id="company-status-button" onclick="switchTab('company-status')">Company Status</button>
 </div>
 <div id="main-frame">
     <div id="request-per-hour" class="tab active">
@@ -144,8 +144,8 @@
             <div class="rounder_corner"  id="file-content"></div>
         </div>
     </div>
-    <div id="empty-tab" class="tab">
-        <h1>Empty Tab</h1>
+    <div id="company-status" class="tab">
+        <div id="hourly-graph" style="width:100%;height:100%"></div>
     </div>
 </div>
 
@@ -574,10 +574,65 @@
             });
     }
 
+    function loadHourlyGraph() {
+        console.log('Loading hourly graph data...');
+
+        fetch('/graph_data_last_hour')
+            .then(response => response.json())
+            .then(data => {
+                var parsedData = JSON.parse(data);
+
+                // Get the container's size
+                var container = document.getElementById('hourly-graph');
+                var layout = {
+                    ...parsedData.layout,
+                    width: container.offsetWidth,
+                    height: container.offsetHeight
+                };
+
+                Plotly.newPlot('hourly-graph', parsedData.data, layout);
+            });
+
+        setTimeout(loadHourlyGraph, 60000);  // Call this function again after 1 minute
+
+        // Add resize event listener to dynamically resize the plot
+        window.addEventListener('resize', function() {
+            var container = document.getElementById('hourly-graph');
+            var width = container.offsetWidth;
+
+            Plotly.relayout('hourly-graph', {
+                width: width
+            });
+        });
+    }
+
+    function loadServers() {
+        fetch('/servers')
+            .then(response => response.json())
+            .then(data => {
+                var dropdown = document.getElementById('server-dropdown-hourly');
+                // Clear old options
+                dropdown.innerHTML = '';
+                // Add a default option
+                var defaultOption = document.createElement('option');
+                defaultOption.value = 'None';
+                defaultOption.textContent = 'All servers';
+                dropdown.appendChild(defaultOption);
+                // Add an option for each server
+                data.forEach(server => {
+                    var option = document.createElement('option');
+                    option.value = server;
+                    option.textContent = server;
+                    dropdown.appendChild(option);
+                });
+            });
+    }
+
 
     document.addEventListener('DOMContentLoaded', function() {
         loadBrokers();
         loadBarGraph();
+        loadHourlyGraph();  // Add this line
 
         var backButton = document.getElementById('back-button');
         backButton.addEventListener('click', handleBackButtonClick);

@@ -60,6 +60,10 @@ cache = {
         'timestamp': None,
         'data': None,
     },
+    'last_hour_graph_data': {
+        'timestamp': None,
+        'data': None,
+    },
 }
 
 
@@ -352,13 +356,24 @@ def execute_and_cache_query(route, pq_clientid, timestamp, sql_query, cache_key,
         for status in set(statuses)
     ])
 
-    # Configure the layout of the bar graph
-    fig.update_layout(
-        barmode='stack',
-        title=plot_title,
-        xaxis_title=xaxis_title,
-        yaxis_title=yaxis_title
-    )
+    if query_params != () and query_params is not None and len(query_params) == 2:
+        print('query_params: ' + str(query_params))
+        # Configure the layout of the bar graph
+        fig.update_layout(
+            barmode='stack',
+            title=plot_title,
+            xaxis_title=xaxis_title,
+            yaxis_title=yaxis_title,
+            xaxis=dict(range=[query_params[0], query_params[1]])
+        )
+    else:
+        # Configure the layout of the bar graph
+        fig.update_layout(
+            barmode='stack',
+            title=plot_title,
+            xaxis_title=xaxis_title,
+            yaxis_title=yaxis_title,
+        )
 
     # At the end of the function, when storing the results in the cache, also store the SQL query
     cache[route][cache_key] = pq_clientid
@@ -366,6 +381,76 @@ def execute_and_cache_query(route, pq_clientid, timestamp, sql_query, cache_key,
     cache[route]['timestamp'] = time.time()
     cache[route]['data'] = jsonify(fig.to_json())
     return cache[route]['data']
+
+
+@app.route('/graph_data_last_hour')
+def graph_data_last_hour():
+    # Check the cache
+    if cache['last_hour_graph_data']['timestamp'] and time.time() - cache['last_hour_graph_data']['timestamp'] < 60:
+        return cache['last_hour_graph_data']['data']
+
+    # Connect to the PostgreSQL server
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS
+    )
+
+    # Create a cursor to execute queries
+    cursor = conn.cursor()
+
+    # SQL query string
+    sql_query = (
+        "SELECT date_trunc('hour', lsr.stamp) as hour, lsd.insurer, lsd.status, COUNT(*) "
+        "FROM log_service_requests AS lsr "
+        "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
+        "WHERE lsr.stamp >= NOW() - INTERVAL '1 hour' "
+        "GROUP BY date_trunc('hour', lsr.stamp), lsd.insurer, lsd.status"
+    )
+
+    cursor.execute(sql_query)
+
+    results = cursor.fetchall()
+
+    # Extract hours, insurers, statuses, and values from the results
+    hours, insurers, statuses, values = zip(*results)
+
+    # Create a dictionary mapping insurers to dictionaries that map statuses to values
+    data = {}
+    for hour, insurer, status, value in results:
+        if insurer not in data:
+            data[insurer] = {}
+        data[insurer][status] = value
+
+    # Close the cursor and the connection
+    cursor.close()
+    conn.close()
+
+    # Create the stacked bar graph using Plotly
+    fig = go.Figure(data=[
+        go.Bar(name=status_labels.get(status, status), y=list(data.keys()),
+               x=[data[insurer].get(status, 0) for insurer in data],
+               orientation='h', # this makes the graph horizontal
+               marker_color=status_colors.get(status, 'rgb(128, 128, 128)')) # default color if status is not in the dictionary
+        for status in set(statuses)
+    ])
+
+    # Configure the layout of the bar graph
+    fig.update_layout(
+        barmode='stack',
+        title='Insurer Requests in the Last Hour',
+        xaxis_title='Count',
+        yaxis_title='Insurer',
+    )
+
+    # Cache the results
+    cache['last_hour_graph_data']['timestamp'] = time.time()
+    cache['last_hour_graph_data']['data'] = jsonify(fig.to_json())
+
+    return cache['last_hour_graph_data']['data']
+
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
