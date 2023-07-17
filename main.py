@@ -421,7 +421,7 @@ def graph_data_last_hour():
             sql_query += "AND lsr.servername LIKE 'PROD%%' "
 
     sql_query += "GROUP BY date_trunc('hour', lsr.stamp), lsd.insurer, lsd.status"
-
+    print("sql_query: " + sql_query)
     cursor.execute(sql_query)
 
     results = cursor.fetchall()
@@ -463,7 +463,81 @@ def graph_data_last_hour():
 
     return cache['last_hour_graph_data']['data']
 
+from datetime import datetime, timedelta
 
+@app.route('/insurer_breakdown/<duration>/<status>/<insurer>/<server>')
+@limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
+def insurer_breakdown(duration, status, insurer, server):
+    #Reverse the status label dictionary
+    status_labels_reverse = {v: k for k, v in status_labels.items()}
+    # Convert the status string to a status code
+    status = status_labels_reverse[status]
+    print("status " + str(status))
+
+    # And for /graph_data/<timestamp>
+    #if cache['minute_breakdown_details']['timestamp'] and time.time() - cache['minute_breakdown_details']['timestamp'] < 60:
+    #    return cache['minute_breakdown']['data']
+    print("insurer_breakdown details: " + duration + " " + str(status) + " " + insurer + " " + server)
+    # Connect to the PostgreSQL server
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS
+    )
+
+    # Create a cursor to execute queries
+    cursor = conn.cursor()
+
+    # Get current timestamp
+    current_timestamp = datetime.now()
+
+    # Calculate the start timestamp by subtracting the duration
+    start_timestamp = current_timestamp - timedelta(hours=int(duration))
+
+    # Use the current timestamp as the end timestamp
+    end_timestamp = current_timestamp
+
+    # SQL query string
+    sql_query = (
+        "SELECT date_trunc('minute', lsr.stamp) as minute, lsr.srnumber as srnumber, lsd.status as status, lsd.insurer as insurer, lsd.responsetime as responsetime, lsd.responsefile as responsefile, "
+        "lsd.requestfile as requestfile, lsr.requestfile as sr_requestfile, lsr.responsefile as sr_responsefile, lsr.lob as lob, lsr.servername as servername, lsr.subbrokerid as subbrokerid, "
+        "lsr.prov as prov, lsr.quotenumber as quotenumber, lsr.pq_clientid as pq_clientid, b.brokername as brokername "
+        "FROM log_service_requests AS lsr "
+        "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
+        "JOIN broker AS b ON lsr.pq_clientid = b.pq_clientid "
+        "WHERE lsr.stamp >= %s and lsr.stamp < %s and lsd.insurer = %s and lsd.status != '1' "
+    )
+
+    print(server)
+
+    if server != 'None':
+        if server == 'Testing':
+            # Use servername starting with "UAT" for testing
+            sql_query += " AND lsr.servername LIKE 'UAT%%' "
+        elif server == 'Production':
+            # Use servername starting with "PROD" for production
+            sql_query += " AND lsr.servername LIKE 'PROD%%' "
+
+    print(sql_query)
+    #cursor.execute(sql_query, (start_timestamp, end_timestamp, insurer, status))
+    cursor.execute(sql_query, (start_timestamp, end_timestamp, insurer))
+
+    results = cursor.fetchall()
+
+    # Convert results to a list of dictionaries
+    result_list = []
+    columns = [column[0] for column in cursor.description]  # Get column names
+    for row in results:
+        result_dict = dict(zip(columns, row))
+        result_list.append(result_dict)
+
+    # Close the cursor and the connection
+    cursor.close()
+    conn.close()
+
+    # Return JSON representation of the result_list
+    return jsonify(result_list)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)

@@ -396,6 +396,9 @@
         var fileContentColumn = document.getElementById('file-content');
         fileContentColumn.innerHTML = ''; // Clear previous content
 
+        var fileContentColumn2 = document.getElementById('insurer-file-content');
+        fileContentColumn2.innerHTML = ''; // Clear previous content
+
         var parser = new DOMParser();
         var xmlDoc = parser.parseFromString(data, 'application/xml');
         var formattedXML = new XMLSerializer().serializeToString(xmlDoc);
@@ -404,6 +407,7 @@
         pre.textContent = formattedXML;
 
         fileContentColumn.appendChild(pre);
+        fileContentColumn2.appendChild(pre);
     }
 
     function createDownloadButton(url, label, responsefile) {
@@ -618,7 +622,11 @@
                     height: container.offsetHeight
                 };
 
-                Plotly.newPlot('hourly-graph', parsedData.data, layout);
+                Plotly.newPlot('hourly-graph', parsedData.data, layout)
+                    .then(function(gd) {
+                        gd.on('plotly_click', handleHourlyGraphClick);
+                    });
+
                 window.dispatchEvent(new Event('resize'));  // Dispatch resize event
             });
 
@@ -657,6 +665,136 @@
             });
     }
 
+    function handleHourlyGraphClick(event) {
+        if (event && event.points) {
+            var insurer = event.points[0].y;
+            console.log('Insurer: ', insurer);  // This should log the insurer when you click on a bar
+            loadInsurerDetail(insurer,event);  // This function should be defined to load the details for the clicked insurer
+        }
+    }
+
+    function loadInsurerDetail(insurer,event){
+            var timestamp = event.points[0].x;
+            var encodedTimestamp = encodeURIComponent(timestamp);
+
+            var pointNumber = event.points[0].pointNumber;
+            var traceIndex = event.points[0].curveNumber;
+
+            var dropdown = document.getElementById('broker-dropdown');
+            var selectedBroker = dropdown.value;  // Get the selected broker pq_clientid
+            if (selectedBroker === '') {
+                selectedBroker = 'None';
+            }
+
+            var dropdownServer = document.getElementById('server-dropdown');
+            var selectedServer = dropdownServer.value;  // Get the selected server
+
+                    // Get the Plotly figure
+                var graphDiv = document.getElementById('bar-graph');
+                var data = graphDiv.data;
+
+                // Get the status from the trace name
+                var status = data[traceIndex].name;
+                console.log('Status: ' + status);
+                fetch('/insurer_breakdown/' + '1' + '/' + status + '/' + insurer.trim() + '/' + selectedServer)
+                    .then(response => response.json())
+                    .then(data => {
+                        var minuteDetailList = document.getElementById('insurer-detail-list');
+                    minuteDetailList.innerHTML = ''; // Clear previous content
+                    console.log(data);
+
+                    var itemMap = new Map(); // Create a map to group items by srnumber
+
+                    // Iterate over the data and group items by srnumber
+                    data.forEach(item => {
+                      if (item.pq_clientid == selectedBroker || selectedBroker == 'None') {
+                        if (!itemMap.has(item.srnumber)) {
+                          itemMap.set(item.srnumber, []);
+                        }
+                        itemMap.get(item.srnumber).push(item);
+                      }
+                    });
+
+                    // Iterate over the grouped items and create HTML elements
+                    itemMap.forEach((items, srnumber) => {
+                      var listItem = document.createElement('li');
+                      listItem.classList.add('collapsible'); // Add the 'collapsible' class to the listItem
+
+                      var contentContainer = document.createElement('div');
+                      contentContainer.classList.add('content', 'collapsed'); // Add the 'content' and 'collapsed' classes to the contentContainer
+                      console.log(itemMap);
+                      contentContainer.id = items[0]['srnumber'];
+                      createRequestDetails(items[0], contentContainer);
+
+                        contentContainer.appendChild(document.createElement('br')); // Add a line break
+
+                      items.forEach(item => {
+                        var itemContainer = document.createElement('div');
+                        //createRequestDetails(item, itemContainer);
+                            itemContainer.classList.add('status-' + item['status']); // Add the 'content' and 'collapsed' classes to the contentContainer
+
+                            valueSpan = document.createElement('span');
+                            var lob_text;
+                            if (item['lob'].charAt(0) === '1') {
+                              lob_text = 'Auto';
+                            } else if (item['lob'].charAt(0) === '2') {
+                              lob_text = 'Home';
+                            } else {
+                              lob_text = 'Credit';
+                            }
+
+                          valueSpan.textContent = item['insurer'] + ' ' + lob_text + ' ' + item['prov'];
+                          valueSpan.style.cssFloat = 'left'; // Align to the left
+                          itemContainer.appendChild(valueSpan);
+
+                          responsetimeSpan = document.createElement('span');
+                          responsetimeSpan.textContent = 'Response Time: ' + item['responsetime'];
+                          responsetimeSpan.style.cssFloat = 'right'; // Align to the right
+                          itemContainer.appendChild(responsetimeSpan);
+
+                            itemContainer.appendChild(document.createElement('br')); // Add a line break
+
+                          serverSpan = document.createElement('span');
+                          serverSpan.textContent = item['servername'];
+                          serverSpan.style.cssFloat = 'right'; // Align to the right
+                          itemContainer.appendChild(serverSpan);
+
+
+
+                        var button3 = createDownloadButton('/process_file_location', 'Request', item.requestfile);
+                        var button4 = createDownloadButton('/process_file_location', 'Response', item.responsefile);
+
+                        // Append the buttons to the item container
+                        itemContainer.appendChild(button3);
+                        itemContainer.appendChild(button4);
+
+                        // Append the item container to the content container
+                        contentContainer.appendChild(itemContainer);
+                      });
+
+                      listItem.appendChild(contentContainer);
+                      minuteDetailList.appendChild(listItem);
+
+                        // Add click event listener to toggle collapsing/expanding of the list item
+                        listItem.addEventListener("click", function () {
+                            var listItems = document.getElementsByClassName("collapsible");
+                            for (var i = 0; i < listItems.length; i++) {
+                                if (listItems[i] !== this) {
+                                    listItems[i].classList.remove("active");
+                                    var content = listItems[i].querySelector(".content");
+                                    content.classList.add("collapsed");
+                                }
+                            }
+
+                            this.classList.toggle("active");
+                            var content = this.querySelector(".content");
+                            content.classList.toggle("collapsed");
+                        });
+                    });
+
+
+                    });
+    }
 
     document.addEventListener('DOMContentLoaded', function() {
         loadBrokers();
