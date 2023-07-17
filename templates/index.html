@@ -5,7 +5,7 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
 .status-0 {
-  background-color: hsl(0, 50%, 90%);
+  background-color: hsl(120, 50%, 85%);
 }
 
 .status-1 {
@@ -24,8 +24,12 @@
   background-color: hsl(30, 100%, 75%);
 }
 
-.status-6, .status-2 {
+.status-2 {
   background-color: hsl(0, 100%, 75%);
+}
+
+.status-6 {
+  background-color: hsl(30, 50%, 75%);
 }
 
 .status-400 {
@@ -33,7 +37,7 @@
 }
 
 .status-200 {
-  background-color: hsl(180, 50%, 70%);
+  background-color: hsl(120, 50%, 85%);
 }
 
         .collapsible {
@@ -406,8 +410,10 @@
         var pre = document.createElement('pre');
         pre.textContent = formattedXML;
 
+        var pre2 = pre.cloneNode(true);
+
         fileContentColumn.appendChild(pre);
-        fileContentColumn2.appendChild(pre);
+        fileContentColumn2.appendChild(pre2);
     }
 
     function createDownloadButton(url, label, responsefile) {
@@ -436,7 +442,7 @@
                 }
             })
             .then(data => {
-                console.log('Response:', data); // Log the full response
+                //console.log('Response:', data); // Log the full response
                 displayFormattedXML(data); // Display the response in the file-content column
 
                 // Add the copy icon to the file-content div
@@ -496,6 +502,13 @@
     }
 
     function switchTab(tabId) {
+        console.log('Switching tab to ' + tabId);
+        var fileContentColumn = document.getElementById('file-content');
+        fileContentColumn.innerHTML = ''; // Clear previous content
+
+        var fileContentColumn2 = document.getElementById('insurer-file-content');
+        fileContentColumn2.innerHTML = ''; // Clear previous content
+
         var tabs = document.getElementsByClassName('tab');
         for (var i = 0; i < tabs.length; i++) {
             tabs[i].classList.remove('active');

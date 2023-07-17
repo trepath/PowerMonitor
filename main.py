@@ -28,7 +28,7 @@ status_colors = {
     500: 'rgb(100, 100, 100)',
     504: 'rgb(255, 128, 128)',
     403: 'rgb(255, 128, 0)',
-    6: 'rgb(255, 0, 0)',
+    6: 'rgb(200, 95, 0)',
     2: 'rgb(255, 0, 0)',
     400: 'rgb(0, 0, 255)',
     200: 'rgb(0, 128, 128)'
@@ -40,7 +40,7 @@ status_labels = {
     500: '500 - Insurer Service Error',
     504: '504 - Timeout',
     403: '403 - Authentication Error',
-    6: 'Critical Error',
+    6: 'JAWS Validation Error - Creds?',
     2: 'Critical Error WAWA',
     400: '400 - Broker Error',
     200: '200 - Success DOC Credit'
