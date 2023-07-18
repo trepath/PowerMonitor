@@ -591,6 +591,42 @@ def insurer_breakdown(duration, status, insurer, server):
     # Return JSON representation of the result_list
     return jsonify(result_list)
 
+@app.route('/broker_quoting_details/<pq_clientid>/<interval>/<server>')
+@limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
+def broker_quoting_details(pq_clientid, interval, server):
+    print("broker_quoting_details: " + pq_clientid + " " + interval + " " + server)
+
+    # SQL query string
+    sql_query = (
+        "SELECT date_trunc('hour', lsr.stamp), lsd.status, COUNT(*) "
+        "FROM log_service_requests AS lsr "
+        "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
+        "WHERE lsr.stamp >= NOW() - INTERVAL '24 hours' "
+    )
+
+    query_params = []
+
+    if pq_clientid != 'None':
+        sql_query += "AND lsr.pq_clientid = %s "
+        query_params.append(pq_clientid)
+
+    if server != 'None':
+        if server == 'Testing':
+            # Use servername starting with "UAT" for testing
+            sql_query += "AND lsr.servername LIKE 'UAT%%' "
+        elif server == 'Production':
+            # Use servername starting with "PROD" for production
+            sql_query += "AND lsr.servername LIKE 'PROD%%' "
+
+    sql_query += "GROUP BY date_trunc('hour', lsr.stamp), lsd.status"
+
+    # Starttime stamp is 24hrs ago now
+    start_timestamp = datetime.now() - timedelta(hours=24)
+    end_timestamp = datetime.now()
+
+    return execute_and_cache_query('graph_data', pq_clientid, None, sql_query, 'pq_clientid',
+                                   server + ' JAWS Requests for last 24 hours', 'Hour', 'Total Requests',
+                                   start_timestamp, end_timestamp, tuple(query_params))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
