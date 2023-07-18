@@ -90,7 +90,7 @@ def reverse_lookup(dictionary, value):
 
 
 @app.route('/graph_data/<timestamp>')
-@limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
+@limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
 def minute_breakdown(timestamp):
     print("minute_breakdown " + timestamp)
 
@@ -145,7 +145,7 @@ def minute_breakdown(timestamp):
 
 
 @app.route('/graph_data_client/<pq_clientid>/<server>')
-@limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
+@limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
 def graph_data(pq_clientid, server):
     print("graph_data")
     print(pq_clientid)
@@ -187,7 +187,7 @@ from datetime import datetime, timedelta
 
 
 @app.route('/minute_breakdown/<timestamp>/<status>/<server>')
-@limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
+@limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
 def minute_breakdown_details(timestamp, status, server):
     # And for /graph_data/<timestamp>
     # if cache['minute_breakdown_details']['timestamp'] and time.time() - cache['minute_breakdown_details']['timestamp'] < 60:
@@ -263,7 +263,7 @@ def minute_breakdown_details(timestamp, status, server):
 
 
 @app.route('/process_file_location', methods=['POST'])
-@limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
+@limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
 def process_file_location():
     data = request.get_json()
     responsefile_path = data['responsefile_path']
@@ -286,7 +286,7 @@ def process_file_location():
 
 
 @app.route('/brokers/<server>')
-@limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
+@limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
 def brokers(server):
     print("brokers " + server)
     conn = psycopg2.connect(
@@ -432,7 +432,7 @@ def execute_and_cache_query(route, pq_clientid, timestamp, sql_query, cache_key,
 
 
 @app.route('/graph_data_last_hour')
-@limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
+@limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
 def graph_data_last_hour():
     server = "Production"
 
@@ -516,13 +516,15 @@ from datetime import datetime, timedelta
 
 
 @app.route('/insurer_breakdown/<duration>/<status>/<insurer>/<server>')
-@limiter.limit("10/minute")  # Limit this endpoint to 10 requests per minute
+@limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
 def insurer_breakdown(duration, status, insurer, server):
     # Reverse the status label dictionary
     status_labels_reverse = {v: k for k, v in status_labels.items()}
+
+    print("Status raw:" + str(status))
     # Convert the status string to a status code
     status = status_labels_reverse[status]
-    print("status " + str(status))
+    print("Status processed:" + str(status))
 
     # And for /graph_data/<timestamp>
     # if cache['minute_breakdown_details']['timestamp'] and time.time() - cache['minute_breakdown_details']['timestamp'] < 60:
@@ -556,7 +558,7 @@ def insurer_breakdown(duration, status, insurer, server):
         "FROM log_service_requests AS lsr "
         "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
         "JOIN broker AS b ON lsr.pq_clientid = b.pq_clientid "
-        "WHERE lsr.stamp >= %s and lsr.stamp < %s and lsd.insurer = %s and lsd.status != '1' "
+        "WHERE lsr.stamp >= %s and lsr.stamp < %s and lsd.insurer = %s and lsd.status = %s "
     )
 
     print(server)
@@ -571,7 +573,7 @@ def insurer_breakdown(duration, status, insurer, server):
 
     print(sql_query)
     # cursor.execute(sql_query, (start_timestamp, end_timestamp, insurer, status))
-    cursor.execute(sql_query, (start_timestamp, end_timestamp, insurer))
+    cursor.execute(sql_query, (start_timestamp, end_timestamp, insurer, status))
 
     results = cursor.fetchall()
 

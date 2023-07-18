@@ -153,6 +153,7 @@
 <div class="tab-buttons">
     <button id="request-per-hour-button" onclick="switchTab('request-per-hour')">JAWS Server Stats</button>
     <button id="company-status-button" onclick="switchTab('company-status')">Company Status</button>
+    <button id="broker-stats-button" onclick="switchTab('company-status')">Broker Stats</button>
 </div>
 <div id="main-frame">
     <div id="request-per-hour" class="tab active">
@@ -177,6 +178,7 @@
             <div class="rounder_corner"  id="insurer-file-content"></div>
         </div>
     </div>
+    <div id="broker-status" class="tab"></div>
 </div>
 
 <script>
@@ -211,7 +213,7 @@
                             gd.on('plotly_click', handleBarClick);
                         });
                 });
-            setTimeout(loadBarGraph, 30000);  // Call this function again after 30 seconds
+            setTimeout(loadBarGraph, 60000);  // Call this function again after 60 seconds
 
             // Add resize event listener to dynamically resize the plot
             window.addEventListener('resize', function() {
@@ -387,6 +389,7 @@
         isViewingDetailedData = false;
 
         loadBrokers();
+        console.log('Back Button calling loadbargraph...');
         loadBarGraph();
 
         var minuteDetailList = document.getElementById('minute-detail-list');
@@ -539,6 +542,7 @@
         fileContentDiv.innerHTML = '';
 
         loadBrokers();
+        console.log('Serverdropdownchange calling loadbargraph...');
         loadBarGraph();
         // Perform actions based on the selected server value
         // For example, you can reload data specific to the selected server
@@ -555,6 +559,7 @@
         var fileContentDiv = document.getElementById('file-content');
         fileContentDiv.innerHTML = '';
 
+        console.log('Refilter calling loadbargraph...');
         loadBarGraph();
 
         console.log('Reloading minute detail data...');
@@ -680,6 +685,7 @@
 
     function handleHourlyGraphClick(event) {
         if (event && event.points) {
+
             var insurer = event.points[0].y;
             console.log('Insurer: ', insurer);  // This should log the insurer when you click on a bar
             loadInsurerDetail(insurer,event);  // This function should be defined to load the details for the clicked insurer
@@ -692,7 +698,6 @@
 
             var pointNumber = event.points[0].pointNumber;
             var traceIndex = event.points[0].curveNumber;
-
             var dropdown = document.getElementById('broker-dropdown');
             var selectedBroker = dropdown.value;  // Get the selected broker pq_clientid
             if (selectedBroker === '') {
@@ -707,7 +712,7 @@
                 var data = graphDiv.data;
 
                 // Get the status from the trace name
-                var status = data[traceIndex].name;
+                var status = event.points[0].data.name;
                 console.log('Status: ' + status);
                 fetch('/insurer_breakdown/' + '1' + '/' + status + '/' + insurer.trim() + '/' + selectedServer)
                     .then(response => response.json())
