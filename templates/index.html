@@ -266,7 +266,7 @@
                 // Get the status from the trace name
                 var status = data[traceIndex].name;
                 console.log('Status: ' + selectedServer);
-                fetch('/minute_breakdown/' + encodedTimestamp + '/' + status + '/' + selectedServer)
+                fetch('/minute_breakdown_details/' + encodedTimestamp + '/' + status + '/' + selectedServer)
                     .then(response => response.json())
                     .then(data => {
                     var minuteDetailList = document.getElementById('minute-detail-list');
@@ -467,6 +467,7 @@
     }
 
     function createRequestDetails(item, contentContainer) {
+        console.log('Creating request details...');
         // Clear the contentContainer
         contentContainer.innerHTML = '';
       var valueSpan = document.createElement('span');
@@ -491,7 +492,12 @@
           contentContainer.appendChild(document.createElement('br')); // Add a line break
         }
 
-
+        if (item['username']) {
+          usernameSpan = document.createElement('span');
+          usernameSpan.textContent = 'Username: ' + item['username'];
+          contentContainer.appendChild(usernameSpan);
+          contentContainer.appendChild(document.createElement('br')); // Add a line break
+        }
 
 
         var button1 = createDownloadButton('/process_file_location', 'ServiceRequest', item.sr_requestfile);

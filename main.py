@@ -186,7 +186,7 @@ def graph_data(pq_clientid, server):
 from datetime import datetime, timedelta
 
 
-@app.route('/minute_breakdown/<timestamp>/<status>/<server>')
+@app.route('/minute_breakdown_details/<timestamp>/<status>/<server>')
 @limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
 def minute_breakdown_details(timestamp, status, server):
     # And for /graph_data/<timestamp>
@@ -224,7 +224,7 @@ def minute_breakdown_details(timestamp, status, server):
     sql_query = (
         "SELECT date_trunc('minute', lsr.stamp) as minute, lsr.srnumber as srnumber, lsd.status as status, lsd.insurer as insurer, lsd.responsetime as responsetime, lsd.responsefile as responsefile, "
         "lsd.requestfile as requestfile, lsr.requestfile as sr_requestfile, lsr.responsefile as sr_responsefile, lsr.lob as lob, lsr.servername as servername, lsr.subbrokerid as subbrokerid, "
-        "lsr.prov as prov, lsr.quotenumber as quotenumber, lsr.pq_clientid as pq_clientid, b.brokername as brokername "
+        "lsr.prov as prov, lsr.quotenumber as quotenumber, lsr.pq_clientid as pq_clientid, b.brokername as brokername, lsr.username as username "
         "FROM log_service_requests AS lsr "
         "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
         "JOIN broker AS b ON lsr.pq_clientid = b.pq_clientid "
