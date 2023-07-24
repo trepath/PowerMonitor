@@ -683,12 +683,11 @@ def brokerQuickStats(broker_pq_clientid):
         "WHERE sw_type = 'PQ' "
         "ORDER BY date_created DESC "
         "LIMIT 1"
-
     )
 
     cursor.execute(sql_query)
     result = cursor.fetchone()
-    print(result)
+    print('Current hotfix rid: ' + str(result[0]))
 
     # Find all the brokers that have an expiry date after 1 month ago, return all relevant data
     sql_query_brokers = (
@@ -697,12 +696,17 @@ def brokerQuickStats(broker_pq_clientid):
         "WHERE b.pq_clientid = software_info.pq_clientid "
     )
 
-    if broker_pq_clientid != 'None':
-        sql_query_brokers += "AND b.pq_clientid = %s"
+    if broker_pq_clientid != 'None' and broker_pq_clientid != 'undefined':
+        sql_query_brokers += "AND b.pq_clientid = %s AND b.expiry >= NOW() - INTERVAL '1 month' and current_hotfixrid != hotfix_rid AND b.product_id LIKE '%PQ%' "
+        sql_query_brokers += "AND b.testing is FALSE and b.demo is FALSE "
         cursor.execute(sql_query_brokers, (result[0], broker_pq_clientid))
     else:
-        sql_query_brokers += "AND b.expiry >= NOW() - INTERVAL '1 month'"
-        cursor.execute(sql_query_brokers)
+        sql_query_brokers += "AND b.expiry >= NOW() - INTERVAL '1 month' "
+        sql_query_brokers += "AND %s != hotfix_rid AND b.product_id LIKE '%%PQ%%' "
+        sql_query_brokers += "AND b.testing is FALSE and b.demo is FALSE "
+        sql_query_brokers += "AND b.brokername NOT LIKE '%%PowerSoft%%' "
+        sql_query_brokers += "AND b.brokername NOT LIKE '%%Powersoft%%' "
+        cursor.execute(sql_query_brokers, (result[0], result[0], ))
 
     results = cursor.fetchall()
     print(results)
@@ -715,9 +719,9 @@ def brokerQuickStats(broker_pq_clientid):
 @app.route('/broker-rate-engines/<broker_pq_clientid>')
 @limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
 def brokerRateEngines(broker_pq_clientid):
-    print("brokerQuickStats: " + broker_pq_clientid)
-    if broker_pq_clientid == 'None':
-        return jsonify([])
+    print("brokerRateEngines: " + broker_pq_clientid)
+    if broker_pq_clientid == 'undefined' or broker_pq_clientid == 'None':
+        return brokerQuickStats(broker_pq_clientid)
 
     conn = psycopg2.connect(
         host=DB_HOST,
@@ -759,7 +763,7 @@ def brokerHotfix(broker_pq_clientid):
     cursor = conn.cursor()
 
     # Return if broker_pq_clientid is None
-    if broker_pq_clientid == 'None':
+    if broker_pq_clientid == 'undefined' or broker_pq_clientid == 'None':
         return jsonify(None)
     else:
         # First find the most recent pq hotfix
