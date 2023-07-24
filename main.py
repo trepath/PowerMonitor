@@ -872,11 +872,14 @@ def graph_top_brokers():
     # Process the SQL results using pandas
     df = pd.DataFrame(results, columns=["pq_clientid", "brokername", "subbrokerid", "total_requests"])
 
+    # Sort the DataFrame by total_requests in descending order
+    df = df.sort_values(by="total_requests", ascending=False)
+
     # Create the horizontal bar graph of top 10 brokers by total requests using Plotly
     fig = go.Figure()
     fig.add_trace(go.Bar(
-        x=df["total_requests"],
-        y=df["brokername"],
+        x=df["total_requests"][::-1],  # Reverse the order of the total_requests column
+        y=df["brokername"][::-1],  # Reverse the order of the brokername column
         orientation='h'
     ))
 

@@ -877,35 +877,38 @@
         var main = document.getElementById('current-broker-details');
         main.innerHTML = ''; // Clear previous content
 
-        fetch('/broker-hotfix/'+selectedCurrentBroker)
-            .then(response => response.json())
-            .then(data => {
-                console.log('Current Broker Hotfix:', data);
-                  const broker_version = data[0][2];
-                  const current_version = data[0][3];
+        if (selectedCurrentBroker !== 'None' && selectedCurrentBroker !== undefined) {
+            fetch('/broker-hotfix/'+selectedCurrentBroker)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Current Broker Hotfix:', data);
+                      const broker_version = data[0][2];
+                      const current_version = data[0][3];
 
-                  // Check if the next two elements are the same
-                  const color = (current_version === broker_version ? 'green' : 'red');
+                      // Check if the next two elements are the same
+                      const color = (current_version === broker_version ? 'green' : 'red');
 
-                  // Create a new div container for the span
-                  const div = document.createElement('div');
-                  div.style.fontWeight = 'bold';
-                  div.style.color = color;
+                      // Create a new div container for the span
+                      const div = document.createElement('div');
+                      div.style.fontWeight = 'bold';
+                      div.style.color = color;
 
-                  // Create a new span element
-                  const span = document.createElement('span');
-                  span.textContent = 'Installed: ' + broker_version + ' Current: ' + current_version;
+                      // Create a new span element
+                      const span = document.createElement('span');
+                      span.textContent = 'Installed: ' + broker_version + ' Current: ' + current_version;
 
-                  // Append the span element to the div container
-                  div.appendChild(span);
+                      // Append the span element to the div container
+                      div.appendChild(span);
 
-                  // Append the div container to the main element
-                  main.appendChild(div);
+                      // Append the div container to the main element
+                      main.appendChild(div);
 
-            });
+                });
+               }
 
          // If selectedCurrentBroker is not 'None', fetch the broker rate engines
-         if (selectedCurrentBroker !== 'None') {
+         console.log('selectedCurrentBroker:', selectedCurrentBroker);
+         if (selectedCurrentBroker !== 'None' && selectedCurrentBroker !== undefined) {
              fetch('/broker-rate-engines/' + selectedCurrentBroker)
                   .then(response => response.json())
                   .then(data => {
@@ -946,44 +949,26 @@
                       main.appendChild(listDiv);
                   });
              }else{
-                 fetch('/broker-quick-stats')
+                 fetch('/broker-quick-stats/'+'None')
                       .then(response => response.json())
                       .then(data => {
-                        console.log('All Brokers:', data);
-
                         // Create a new div container for the list
                         const listDiv = document.createElement('div');
                         listDiv.classList.add('list');
+                        console.log('Current Broker:', data);
+                        var itemContainer = document.createElement('div');
 
                         for (const item of data) {
                           if (item.includes(null)) {
                             continue; // Ignore elements containing 'null'
                           }
+                            //derp
+                            createBrokerDetails(item, itemContainer);
 
-                          const firstThreeElements = item.slice(0, 3).join(' ').trim();
-                          const nextTwoElements = item.slice(3, 5);
-
-                          // Check if the next two elements are the same
-                          const color = (new Set(nextTwoElements)).size === 1 ? 'green' : 'red';
-
-                          // Create a new div container for the span
-                          const div = document.createElement('div');
-                          div.style.fontWeight = 'bold';
-                          div.style.color = color;
-
-                          // Create a new span element
-                          const span = document.createElement('span');
-                          span.textContent = firstThreeElements;
-
-                          // Append the span element to the div container
-                          div.appendChild(span);
-
-                          // Append the div container to the main element
-                          listDiv.appendChild(div);
                         }
 
                           // Append the div container to the main element
-                          main.appendChild(listDiv);
+                          main.appendChild(itemContainer);
                       });
                  }
     }
@@ -1023,6 +1008,42 @@
                     width: width
                 });
             });
+        }
+
+        function createBrokerDetails(item, contentContainer) {
+            console.log('Creating broker details...');
+            // Clear the contentContainer
+            //contentContainer.innerHTML = '';
+          var valueSpan = document.createElement('span');
+          valueSpan.textContent = item[0];
+          contentContainer.appendChild(valueSpan);
+
+          valueSpan = document.createElement('span');
+          valueSpan.textContent = item[1];
+          contentContainer.appendChild(valueSpan);
+
+          quoteNumberSpan = document.createElement('span');
+            quoteNumberSpan.textContent = item[4]+'/'+ item[5];
+            quoteNumberSpan.style.cssFloat = 'right'; // Align to the right
+            contentContainer.appendChild(quoteNumberSpan);
+
+          contentContainer.appendChild(document.createElement('br')); // Add a line break
+
+            if (item['subbrokerid']) {
+              subbrokeridSpan = document.createElement('span');
+              subbrokeridSpan.textContent = 'Subbroker: ' + item['subbrokerid'];
+              contentContainer.appendChild(subbrokeridSpan);
+              contentContainer.appendChild(document.createElement('br')); // Add a line break
+            }
+
+            if (item['username']) {
+              usernameSpan = document.createElement('span');
+              usernameSpan.textContent = 'Username: ' + item['username'];
+              contentContainer.appendChild(usernameSpan);
+              contentContainer.appendChild(document.createElement('br')); // Add a line break
+            }
+
+          contentContainer.appendChild(document.createElement('br')); // Add a line break
         }
 
     document.addEventListener('DOMContentLoaded', function() {
