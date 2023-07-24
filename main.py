@@ -447,6 +447,7 @@ def graph_data_last_hour():
 
     # Check the cache
     if cache['last_hour_graph_data']['timestamp'] and time.time() - cache['last_hour_graph_data']['timestamp'] < 60:
+        print("Using cached data")
         return cache['last_hour_graph_data']['data']
 
     # Connect to the PostgreSQL server
@@ -710,10 +711,14 @@ def brokerQuickStats(broker_pq_clientid):
 
     return jsonify(results)
 
+
 @app.route('/broker-rate-engines/<broker_pq_clientid>')
 @limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
 def brokerRateEngines(broker_pq_clientid):
     print("brokerQuickStats: " + broker_pq_clientid)
+    if broker_pq_clientid == 'None':
+        return jsonify([])
+
     conn = psycopg2.connect(
         host=DB_HOST,
         database=DB_NAME,
@@ -740,6 +745,7 @@ def brokerRateEngines(broker_pq_clientid):
 
     return jsonify(results)
 
+
 @app.route('/broker-hotfix/<broker_pq_clientid>')
 @limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
 def brokerHotfix(broker_pq_clientid):
@@ -752,14 +758,18 @@ def brokerHotfix(broker_pq_clientid):
     )
     cursor = conn.cursor()
 
-    # First find the most recent pq hotfix
-    sql_query = (
-        "select software_info.sw_type, software_info.version, software_info.hotfix_rid  "
-        "as broker_rid, hotfix.hotfix_rid as current_rid "
-        "from software_info, hotfix "
-        "where pq_clientid = %s and software_info.sw_type = hotfix.sw_type  "
-        "and software_info.version = hotfix.sw_version "
-    )
+    # Return if broker_pq_clientid is None
+    if broker_pq_clientid == 'None':
+        return jsonify(None)
+    else:
+        # First find the most recent pq hotfix
+        sql_query = (
+            "select software_info.sw_type, software_info.version, software_info.hotfix_rid  "
+            "as broker_rid, hotfix.hotfix_rid as current_rid "
+            "from software_info, hotfix "
+            "where pq_clientid = %s and software_info.sw_type = hotfix.sw_type  "
+            "and software_info.version = hotfix.sw_version "
+        )
 
     cursor.execute(sql_query, (broker_pq_clientid,))  # Pass the parameter as a tuple
 
@@ -810,8 +820,9 @@ def brokerQuoteHistory(broker_pq_clientid):
 def graph_top_brokers():
     server = "Production"
 
-    # Check the cache
-    if cache['graph_top_brokers']['timestamp'] and time.time() - cache['graph_top_brokers']['timestamp'] < 60:
+    # Check the cache, if the data is less than 300 seconds old, use it
+    if cache['graph_top_brokers']['timestamp'] and time.time() - cache['graph_top_brokers']['timestamp'] < 300:
+        print("Using cached data")
         return cache['graph_top_brokers']['data']
 
     # Connect to the PostgreSQL server

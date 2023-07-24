@@ -904,48 +904,48 @@
 
             });
 
-         fetch('/broker-rate-engines/' + selectedCurrentBroker)
-              .then(response => response.json())
-              .then(data => {
-                console.log('Current Broker:', data);
+         // If selectedCurrentBroker is not 'None', fetch the broker rate engines
+         if (selectedCurrentBroker !== 'None') {
+             fetch('/broker-rate-engines/' + selectedCurrentBroker)
+                  .then(response => response.json())
+                  .then(data => {
+                    console.log('Current Broker:', data);
 
-                // Create a new div container for the list
-                const listDiv = document.createElement('div');
-                listDiv.classList.add('list');
+                    // Create a new div container for the list
+                    const listDiv = document.createElement('div');
+                    listDiv.classList.add('list');
 
-                for (const item of data) {
-                  if (item.includes(null)) {
-                    continue; // Ignore elements containing 'null'
-                  }
+                    for (const item of data) {
+                      if (item.includes(null)) {
+                        continue; // Ignore elements containing 'null'
+                      }
 
-                  const firstThreeElements = item.slice(0, 3).join(' ').trim();
-                  const nextTwoElements = item.slice(3, 5);
+                      const firstThreeElements = item.slice(0, 3).join(' ').trim();
+                      const nextTwoElements = item.slice(3, 5);
 
-                  // Check if the next two elements are the same
-                  const color = (new Set(nextTwoElements)).size === 1 ? 'green' : 'red';
+                      // Check if the next two elements are the same
+                      const color = (new Set(nextTwoElements)).size === 1 ? 'green' : 'red';
 
-                  // Create a new div container for the span
-                  const div = document.createElement('div');
-                  div.style.fontWeight = 'bold';
-                  div.style.color = color;
+                      // Create a new div container for the span
+                      const div = document.createElement('div');
+                      div.style.fontWeight = 'bold';
+                      div.style.color = color;
 
-                  // Create a new span element
-                  const span = document.createElement('span');
-                  span.textContent = firstThreeElements;
+                      // Create a new span element
+                      const span = document.createElement('span');
+                      span.textContent = firstThreeElements;
 
-                  // Append the span element to the div container
-                  div.appendChild(span);
+                      // Append the span element to the div container
+                      div.appendChild(span);
 
-                  // Append the div container to the main element
-                  listDiv.appendChild(div);
-                }
+                      // Append the div container to the main element
+                      listDiv.appendChild(div);
+                    }
 
-                  // Append the div container to the main element
-                  main.appendChild(listDiv);
-              });
-
-
-
+                      // Append the div container to the main element
+                      main.appendChild(listDiv);
+                  });
+             }
     }
 
         function loadTopBrokers() {
