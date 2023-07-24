@@ -1010,41 +1010,77 @@
             });
         }
 
-        function createBrokerDetails(item, contentContainer) {
-            console.log('Creating broker details...');
-            // Clear the contentContainer
-            //contentContainer.innerHTML = '';
-          var valueSpan = document.createElement('span');
-          valueSpan.textContent = item[0];
-          contentContainer.appendChild(valueSpan);
+function createBrokerDetails(item, contentContainer) {
+    console.log('Creating broker details...');
+    // Clear the contentContainer
+    //contentContainer.innerHTML = '';
+    var listItem = document.createElement('li');
+    listItem.classList.add('collapsible'); // Add the 'collapsible' class to the listItem
 
-          valueSpan = document.createElement('span');
-          valueSpan.textContent = item[1];
-          contentContainer.appendChild(valueSpan);
+    var content = document.createElement('div');
+    content.classList.add('content', 'collapsed');
+    listItem.appendChild(content);
 
-          quoteNumberSpan = document.createElement('span');
-            quoteNumberSpan.textContent = item[4]+'/'+ item[5];
-            quoteNumberSpan.style.cssFloat = 'right'; // Align to the right
-            contentContainer.appendChild(quoteNumberSpan);
+    var valueSpan = document.createElement('span');
+    valueSpan.textContent = item[0];
+    content.appendChild(valueSpan);
 
-          contentContainer.appendChild(document.createElement('br')); // Add a line break
+    brokernameSpan = document.createElement('span');
+    brokernameSpan.textContent = item[0];
+    content.appendChild(brokernameSpan);
 
-            if (item['subbrokerid']) {
-              subbrokeridSpan = document.createElement('span');
-              subbrokeridSpan.textContent = 'Subbroker: ' + item['subbrokerid'];
-              contentContainer.appendChild(subbrokeridSpan);
-              contentContainer.appendChild(document.createElement('br')); // Add a line break
+    pqClientIDSpan = document.createElement('span');
+    pqClientIDSpan.textContent = item[1];
+    pqClientIDSpan.style.cssFloat = 'right'; // Align to the right
+    content.appendChild(pqClientIDSpan);
+
+    content.appendChild(document.createElement('br')); // Add a line break
+
+    installedHotfixSpan = document.createElement('span');
+    installedHotfixSpan.textContent = 'Installed PQ Hotfix: ' + item[4];
+    content.appendChild(installedHotfixSpan);
+
+    content.appendChild(document.createElement('br')); // Add a line break
+
+    currentHotfixSpan = document.createElement('span');
+    currentHotfixSpan.textContent = 'Current PQ Hotfix: ' + item[5];
+    content.appendChild(currentHotfixSpan);
+
+    content.appendChild(document.createElement('br')); // Add a line break
+
+    if (item['subbrokerid']) {
+        subbrokeridSpan = document.createElement('span');
+        subbrokeridSpan.textContent = 'Subbroker: ' + item['subbrokerid'];
+        content.appendChild(subbrokeridSpan);
+        content.appendChild(document.createElement('br')); // Add a line break
+    }
+
+    if (item['username']) {
+        usernameSpan = document.createElement('span');
+        usernameSpan.textContent = 'Username: ' + item['username'];
+        content.appendChild(usernameSpan);
+        contentContainer.appendChild(document.createElement('br')); // Add a line break (Fixed typo here)
+    }
+
+    // Add click event listener to toggle collapsing/expanding of the list item
+    listItem.addEventListener("click", function () {
+        var listItems = document.getElementsByClassName("collapsible");
+        for (var i = 0; i < listItems.length; i++) {
+            if (listItems[i] !== this) {
+                listItems[i].classList.remove("active");
+                 var content = this.firstElementChild;  // this will get the first child of listItem, which should be your content div
+                    content.classList.toggle("collapsed");
             }
-
-            if (item['username']) {
-              usernameSpan = document.createElement('span');
-              usernameSpan.textContent = 'Username: ' + item['username'];
-              contentContainer.appendChild(usernameSpan);
-              contentContainer.appendChild(document.createElement('br')); // Add a line break
-            }
-
-          contentContainer.appendChild(document.createElement('br')); // Add a line break
         }
+
+        this.classList.toggle("active");
+        var content = this.querySelector(".content");
+        content.classList.toggle("collapsed");
+    });
+
+    contentContainer.appendChild(listItem); // Add the item to the contentContainer
+}
+
 
     document.addEventListener('DOMContentLoaded', function() {
         loadBrokers();
