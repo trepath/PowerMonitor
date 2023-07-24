@@ -5,8 +5,10 @@ import time
 import pandas as pd
 import psycopg2
 import plotly.graph_objects as go
+import plotly.io as pio
 from flask import Flask, render_template, jsonify, send_file, request, abort
 from flask_limiter import Limiter
+
 from flask_limiter.util import get_remote_address
 
 # Read the configuration file
@@ -65,7 +67,12 @@ cache = {
         'timestamp': None,
         'data': None,
     },
+    'graph_top_brokers': {
+        'timestamp': None,
+        'data': None,
+    },
 }
+
 
 # Create Flask web server
 app = Flask(__name__)
@@ -318,6 +325,8 @@ def brokers(server):
 
     results = cursor.fetchall()
     print(results)
+    conn.close()
+
     return jsonify(results)
 
 
@@ -554,7 +563,7 @@ def insurer_breakdown(duration, status, insurer, server):
     sql_query = (
         "SELECT date_trunc('minute', lsr.stamp) as minute, lsr.srnumber as srnumber, lsd.status as status, lsd.insurer as insurer, lsd.responsetime as responsetime, lsd.responsefile as responsefile, "
         "lsd.requestfile as requestfile, lsr.requestfile as sr_requestfile, lsr.responsefile as sr_responsefile, lsr.lob as lob, lsr.servername as servername, lsr.subbrokerid as subbrokerid, "
-        "lsr.prov as prov, lsr.quotenumber as quotenumber, lsr.pq_clientid as pq_clientid, b.brokername as brokername "
+        "lsr.prov as prov, lsr.quotenumber as quotenumber, lsr.pq_clientid as pq_clientid, b.brokername as brokername, lsr.username as username "
         "FROM log_service_requests AS lsr "
         "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
         "JOIN broker AS b ON lsr.pq_clientid = b.pq_clientid "
@@ -627,6 +636,248 @@ def broker_quoting_details(pq_clientid, interval, server):
     return execute_and_cache_query('graph_data', pq_clientid, None, sql_query, 'pq_clientid',
                                    server + ' JAWS Requests for last 24 hours', 'Hour', 'Total Requests',
                                    start_timestamp, end_timestamp, tuple(query_params))
+
+@app.route('/current-brokers')
+@limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
+def currentBrokers():
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS
+    )
+    cursor = conn.cursor()
+
+    sql_query = (
+        "SELECT DISTINCT broker.brokername, broker.pq_clientid "
+        "FROM broker "
+        "WHERE broker.expiry >= NOW() - INTERVAL '1 month' "
+        "AND (broker.product_id LIKE '%RC%' OR broker.product_id LIKE '%PQ%') "
+        "ORDER BY broker.brokername ASC"
+    )
+
+    cursor.execute(sql_query)
+
+    results = cursor.fetchall()
+    print(results)
+    conn.close()
+    return jsonify(results)
+
+@app.route('/broker-quick-stats/<broker_pq_clientid>')
+@limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
+def brokerQuickStats(broker_pq_clientid):
+    print("brokerQuickStats: " + broker_pq_clientid)
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS
+    )
+    cursor = conn.cursor()
+
+    # First find the most recent pq hotfix
+    sql_query = (
+        "SELECT hotfix_rid "
+        "FROM hotfix "
+        "WHERE sw_type = 'PQ' "
+        "ORDER BY date_created DESC "
+        "LIMIT 1"
+
+    )
+
+    cursor.execute(sql_query)
+    result = cursor.fetchone()
+    print(result)
+
+    # Find all the brokers that have an expiry date after 1 month ago, return all relevant data
+    sql_query_brokers = (
+        "SELECT b.brokername, b.pq_clientid, b.prod_id, b.expiry, software_info.hotfix_rid as hotfix_rid, %s AS current_hotfixrid "
+        "FROM broker as b, software_info "
+        "WHERE b.pq_clientid = software_info.pq_clientid "
+    )
+
+    if broker_pq_clientid != 'None':
+        sql_query_brokers += "AND b.pq_clientid = %s"
+        cursor.execute(sql_query_brokers, (result[0], broker_pq_clientid))
+    else:
+        sql_query_brokers += "AND b.expiry >= NOW() - INTERVAL '1 month'"
+        cursor.execute(sql_query_brokers)
+
+    results = cursor.fetchall()
+    print(results)
+
+    conn.close()
+
+    return jsonify(results)
+
+@app.route('/broker-rate-engines/<broker_pq_clientid>')
+@limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
+def brokerRateEngines(broker_pq_clientid):
+    print("brokerQuickStats: " + broker_pq_clientid)
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS
+    )
+    cursor = conn.cursor()
+
+    # First find the most recent pq hotfix
+    sql_query = (
+        "SELECT rateengine.insurer, rateengine.prov, rateengine.line, rateengine.version as current_version, client_re.version "
+        "FROM client_re "
+        "JOIN rateengine ON client_re.rid = rateengine.rid "
+        "WHERE client_re.pq_clientid = %s "
+        "ORDER BY rateengine.insurer, rateengine.prov, rateengine.line"
+    )
+
+    cursor.execute(sql_query, (broker_pq_clientid,))  # Pass the parameter as a tuple
+
+    results = cursor.fetchall()
+    print(results)
+
+    conn.close()
+
+    return jsonify(results)
+
+@app.route('/broker-hotfix/<broker_pq_clientid>')
+@limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
+def brokerHotfix(broker_pq_clientid):
+    print("brokerHotfix: " + broker_pq_clientid)
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS
+    )
+    cursor = conn.cursor()
+
+    # First find the most recent pq hotfix
+    sql_query = (
+        "select software_info.sw_type, software_info.version, software_info.hotfix_rid  "
+        "as broker_rid, hotfix.hotfix_rid as current_rid "
+        "from software_info, hotfix "
+        "where pq_clientid = %s and software_info.sw_type = hotfix.sw_type  "
+        "and software_info.version = hotfix.sw_version "
+    )
+
+    cursor.execute(sql_query, (broker_pq_clientid,))  # Pass the parameter as a tuple
+
+    results = cursor.fetchall()
+    print(results)
+
+    conn.close()
+
+    return jsonify(results)
+
+@app.route('/broker-quote-history/<broker_pq_clientid>')
+@limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
+def brokerQuoteHistory(broker_pq_clientid):
+    print("brokerQuoteHistory: " + broker_pq_clientid)
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS
+    )
+    cursor = conn.cursor()
+
+    # First find the most recent pq hotfix
+    sql_query = (
+        "SELECT lsr.pq_clientid,"
+        "       lsr.subbrokerid,"
+        "       COUNT(*) AS total_requests"
+        " FROM log_service_requests lsr"
+        " JOIN log_service_requests_details lsrd"
+        "   ON lsr.srnumber = lsrd.srnumber"
+        " WHERE lsr.stamp >= NOW() - INTERVAL '30 days'"
+        "   AND lsr.servername LIKE 'PROD%'"
+        " GROUP BY lsr.pq_clientid, lsr.subbrokerid"
+        " ORDER BY total_requests DESC;"
+    )
+
+    cursor.execute(sql_query, (broker_pq_clientid,))  # Pass the parameter as a tuple
+
+    results = cursor.fetchall()
+    print(results)
+
+    conn.close()
+
+    return jsonify(results)
+
+@app.route('/top-brokers')
+@limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
+def graph_top_brokers():
+    server = "Production"
+
+    # Check the cache
+    if cache['graph_top_brokers']['timestamp'] and time.time() - cache['graph_top_brokers']['timestamp'] < 60:
+        return cache['graph_top_brokers']['data']
+
+    # Connect to the PostgreSQL server
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS
+    )
+
+    # Create a cursor to execute queries
+    cursor = conn.cursor()
+
+    # SQL query string
+    sql_query = (
+        "SELECT lsr.pq_clientid,"
+        "       b.brokername,"
+        "       lsr.subbrokerid,"
+        "       COUNT(*) AS total_requests"
+        " FROM log_service_requests lsr"
+        " JOIN log_service_requests_details lsrd"
+        "   ON lsr.srnumber = lsrd.srnumber"
+        " JOIN broker b"
+        "   ON lsr.pq_clientid = b.pq_clientid"
+        " WHERE lsr.stamp >= NOW() - INTERVAL '30 days'"
+    )
+
+    if server != 'none':
+        if server == 'Testing':
+            # Use servername starting with "UAT" for testing
+            sql_query += "AND lsr.servername LIKE 'UAT%%' "
+        elif server == 'Production':
+            # Use servername starting with "PROD" for production
+            sql_query += "AND lsr.servername LIKE 'PROD%%' "
+
+    sql_query += " GROUP BY lsr.pq_clientid, b.brokername, lsr.subbrokerid ORDER BY total_requests DESC LIMIT 15;"
+
+    print("sql_query: " + sql_query)
+    cursor.execute(sql_query)
+
+    results = cursor.fetchall()
+
+    # Process the SQL results using pandas
+    df = pd.DataFrame(results, columns=["pq_clientid", "brokername", "subbrokerid", "total_requests"])
+
+    # Create the horizontal bar graph of top 10 brokers by total requests using Plotly
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=df["total_requests"],
+        y=df["brokername"],
+        orientation='h'
+    ))
+
+    fig.update_layout(
+        title="Top 15 Brokers",
+        xaxis_title="Total Requests in 30 Days",
+        yaxis_title="Broker Names",
+        margin=dict(l=100, r=20, t=70, b=50)
+    )
+
+    # Cache the results
+    cache['graph_top_brokers']['timestamp'] = time.time()
+    cache['graph_top_brokers']['data'] = jsonify(fig.to_json())
+
+    return cache['graph_top_brokers']['data']
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)

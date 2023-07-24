@@ -147,13 +147,26 @@
             height: 500px; /* Set the initial height */
             position: relative;
         }
+
+        .list {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .list div:nth-child(even) {
+            background-color: #f2f2f2; /* Lighter grey color */
+        }
+
+        .list div:nth-child(odd) {
+            background-color: white;
+        }
     </style>
 </head>
 <body>
 <div class="tab-buttons">
     <button id="request-per-hour-button" onclick="switchTab('request-per-hour')">JAWS Server Stats</button>
     <button id="company-status-button" onclick="switchTab('company-status')">Company Status</button>
-    <button id="broker-stats-button" onclick="switchTab('company-status')">Broker Stats</button>
+    <button id="broker-status-button" onclick="switchTab('broker-status')">Broker Stats</button>
 </div>
 <div id="main-frame">
     <div id="request-per-hour" class="tab active">
@@ -178,7 +191,16 @@
             <div class="rounder_corner"  id="insurer-file-content"></div>
         </div>
     </div>
-    <div id="broker-status" class="tab"></div>
+    <div id="broker-status" class="tab">
+        <div id="current-broker-graph" style="width:100%;height:100%"></div>
+        <select id="current-broker-dropdown">
+            <!-- Broker options will be populated here by JavaScript -->
+        </select>
+        <div class="container">
+            <div class="rounder_corner" id="current-broker-details"></div>
+            <div class="rounder_corner"  id="current-broker-stats"></div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -532,6 +554,8 @@
         document.getElementById(tabId + '-button').classList.add('active');
 
         window.dispatchEvent(new Event('resize'));  // Dispatch resize event
+
+        loadTopBrokers();
     }
 
     function handleServerDropDownChange() {
@@ -689,6 +713,28 @@
             });
     }
 
+    function populateCurrentBroker(){
+            fetch('/current-brokers')
+            .then(response => response.json())
+            .then(data => {
+                var dropdown = document.getElementById('current-broker-dropdown');
+                // Clear old options
+                dropdown.innerHTML = '';
+                // Add a default option
+                var defaultOption = document.createElement('option');
+                defaultOption.value = 'None';
+                defaultOption.textContent = 'All Brokers';
+                dropdown.appendChild(defaultOption);
+                // Add an option for each server
+                data.forEach(server => {
+                    var option = document.createElement('option');
+                    option.value = server;
+                    option.textContent = server;
+                    dropdown.appendChild(option);
+                });
+            });
+    }
+
     function handleHourlyGraphClick(event) {
         if (event && event.points) {
 
@@ -820,10 +866,131 @@
                     });
     }
 
+    function populateBrokerInfo(){
+        console.log('populateBrokerInfo');
+        var dropdownCurrentBroker = document.getElementById('current-broker-dropdown');
+        var selectedCurrentBroker = dropdownCurrentBroker.value;  // Get the selected server
+        selectedCurrentBroker = selectedCurrentBroker.replace(/\s/g, ""); // Remove all whitespaces
+
+        selectedCurrentBroker = selectedCurrentBroker.split(',')[1];
+
+        var main = document.getElementById('current-broker-details');
+        main.innerHTML = ''; // Clear previous content
+
+        fetch('/broker-hotfix/'+selectedCurrentBroker)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Current Broker Hotfix:', data);
+                  const broker_version = data[0][2];
+                  const current_version = data[0][3];
+
+                  // Check if the next two elements are the same
+                  const color = (current_version === broker_version ? 'green' : 'red');
+
+                  // Create a new div container for the span
+                  const div = document.createElement('div');
+                  div.style.fontWeight = 'bold';
+                  div.style.color = color;
+
+                  // Create a new span element
+                  const span = document.createElement('span');
+                  span.textContent = 'Installed: ' + broker_version + ' Current: ' + current_version;
+
+                  // Append the span element to the div container
+                  div.appendChild(span);
+
+                  // Append the div container to the main element
+                  main.appendChild(div);
+
+            });
+
+         fetch('/broker-rate-engines/' + selectedCurrentBroker)
+              .then(response => response.json())
+              .then(data => {
+                console.log('Current Broker:', data);
+
+                // Create a new div container for the list
+                const listDiv = document.createElement('div');
+                listDiv.classList.add('list');
+
+                for (const item of data) {
+                  if (item.includes(null)) {
+                    continue; // Ignore elements containing 'null'
+                  }
+
+                  const firstThreeElements = item.slice(0, 3).join(' ').trim();
+                  const nextTwoElements = item.slice(3, 5);
+
+                  // Check if the next two elements are the same
+                  const color = (new Set(nextTwoElements)).size === 1 ? 'green' : 'red';
+
+                  // Create a new div container for the span
+                  const div = document.createElement('div');
+                  div.style.fontWeight = 'bold';
+                  div.style.color = color;
+
+                  // Create a new span element
+                  const span = document.createElement('span');
+                  span.textContent = firstThreeElements;
+
+                  // Append the span element to the div container
+                  div.appendChild(span);
+
+                  // Append the div container to the main element
+                  listDiv.appendChild(div);
+                }
+
+                  // Append the div container to the main element
+                  main.appendChild(listDiv);
+              });
+
+
+
+    }
+
+        function loadTopBrokers() {
+            console.log('Loading top Brokers...');
+
+            fetch('/top-brokers')
+                .then(response => response.json())
+                .then(data => {
+                    var parsedData = JSON.parse(data);
+                    console.log('Top Brokers:', parsedData);
+                    // Get the container's size
+                    var container = document.getElementById('current-broker-graph');
+                    var layout = {
+                        ...parsedData.layout,
+                        width: container.offsetWidth,
+                        height: container.offsetHeight
+                    };
+
+                    Plotly.newPlot('current-broker-graph', parsedData.data, layout)
+                        .then(function(gd) {
+                            gd.on('plotly_click', handleHourlyGraphClick);
+                        });
+
+                    window.dispatchEvent(new Event('resize'));  // Dispatch resize event
+                });
+
+            setTimeout(loadHourlyGraph, 60000);  // Call this function again after 1 minute
+
+            // Add resize event listener to dynamically resize the plot
+            window.addEventListener('resize', function() {
+                var container = document.getElementById('current-broker-graph');
+                var width = container.offsetWidth;
+
+                Plotly.relayout('current-broker-graph', {
+                    width: width
+                });
+            });
+        }
+
     document.addEventListener('DOMContentLoaded', function() {
         loadBrokers();
         loadBarGraph();
         loadHourlyGraph();  // Add this line
+        populateCurrentBroker();
+        loadTopBrokers();
 
         var backButton = document.getElementById('back-button');
         backButton.addEventListener('click', handleBackButtonClick);
@@ -833,6 +1000,9 @@
 
         var dropdown = document.getElementById('broker-dropdown');
         dropdown.addEventListener('change', refilter);
+
+        var dropdown = document.getElementById('current-broker-dropdown');
+        dropdown.addEventListener('change', populateBrokerInfo);
 
         var serverDropdown = document.getElementById('server-dropdown');
         serverDropdown.addEventListener('change', handleServerDropDownChange);
