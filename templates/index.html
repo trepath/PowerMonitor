@@ -902,52 +902,34 @@
 
                       // Append the div container to the main element
                       main.appendChild(div);
-
                 });
                }
 
          // If selectedCurrentBroker is not 'None', fetch the broker rate engines
          console.log('selectedCurrentBroker:', selectedCurrentBroker);
          if (selectedCurrentBroker !== 'None' && selectedCurrentBroker !== undefined) {
-             fetch('/broker-rate-engines/' + selectedCurrentBroker)
+             fetch('/broker-quick-stats/' + selectedCurrentBroker)
                   .then(response => response.json())
                   .then(data => {
-                    console.log('Current Broker:', data);
+                        // Create a new div container for the list
+                        const listDiv = document.createElement('div');
+                        listDiv.classList.add('list');
+                        console.log('Current Broker:', data);
+                        var itemContainer = document.createElement('div');
 
-                    // Create a new div container for the list
-                    const listDiv = document.createElement('div');
-                    listDiv.classList.add('list');
-
-                    for (const item of data) {
-                      if (item.includes(null)) {
-                        continue; // Ignore elements containing 'null'
-                      }
-
-                      const firstThreeElements = item.slice(0, 3).join(' ').trim();
-                      const nextTwoElements = item.slice(3, 5);
-
-                      // Check if the next two elements are the same
-                      const color = (new Set(nextTwoElements)).size === 1 ? 'green' : 'red';
-
-                      // Create a new div container for the span
-                      const div = document.createElement('div');
-                      div.style.fontWeight = 'bold';
-                      div.style.color = color;
-
-                      // Create a new span element
-                      const span = document.createElement('span');
-                      span.textContent = firstThreeElements;
-
-                      // Append the span element to the div container
-                      div.appendChild(span);
-
-                      // Append the div container to the main element
-                      listDiv.appendChild(div);
-                    }
-
-                      // Append the div container to the main element
-                      main.appendChild(listDiv);
-                  });
+                        for (const item of data) {
+                          if (item.includes(null)) {
+                            continue; // Ignore elements containing 'null'
+                          }
+                            //derp
+                            createBrokerDetails(item, itemContainer);
+                        }
+                          // Append the div container to the main element
+                          main.appendChild(itemContainer);
+                            console.log('itemContainer:', itemContainer);
+                            console.log('itemContainer collapsible:', itemContainer.getElementsByClassName("collapsible")[0]);
+                            toggleCollapsible(itemContainer.getElementsByClassName("collapsible")[0],selectedCurrentBroker);
+                      });
              }else{
                  fetch('/broker-quick-stats/'+'None')
                       .then(response => response.json())
@@ -1064,25 +1046,30 @@ function createBrokerDetails(item, contentContainer) {
 
     // Add click event listener to toggle collapsing/expanding of the list item
     listItem.addEventListener("click", function () {
-        var listItems = document.getElementsByClassName("collapsible");
-        for (var i = 0; i < listItems.length; i++) {
-            if (listItems[i] !== this) {
-                listItems[i].classList.remove("active");
-                 var content = this.firstElementChild;  // this will get the first child of listItem, which should be your content div
-                    content.classList.toggle("collapsed");
-            }else{
-                var content = this.firstElementChild;  // this will get the first child of listItem, which should be your content div
-                // fetch the rate engines for the broker and display them
-                createRateEngines(item[1], content);
-            }
-        }
-
-        this.classList.toggle("active");
-        var content = this.querySelector(".content");
-        content.classList.toggle("collapsed");
+        toggleCollapsible(this,item[1]);
     });
 
     contentContainer.appendChild(listItem); // Add the item to the contentContainer
+}
+
+function toggleCollapsible(listItem,pq_clientid) {
+    var listItems = document.getElementsByClassName("collapsible");
+    for (var i = 0; i < listItems.length; i++) {
+        if (listItems[i] !== listItem) {
+            listItems[i].classList.remove("active");
+            var content = listItems[i].firstElementChild;
+            content.classList.add("collapsed");
+        } else {
+
+            var content = listItem.firstElementChild;
+            // fetch the rate engines for the broker and display them
+            createRateEngines(pq_clientid, content);
+        }
+    }
+
+    listItem.classList.toggle("active");
+    var content = listItem.querySelector(".content");
+    content.classList.toggle("collapsed");
 }
 
 function createRateEngines(pqClientID, contentContainer) {
