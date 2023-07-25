@@ -965,7 +965,6 @@
                             //derp
                             createBrokerDetails(item, itemContainer);
                         }
-
                           // Append the div container to the main element
                           main.appendChild(itemContainer);
                       });
@@ -997,6 +996,7 @@
                 });
 
             setTimeout(loadHourlyGraph, 60000);  // Call this function again after 1 minute
+            populateBrokerInfo();
 
             // Add resize event listener to dynamically resize the plot
             window.addEventListener('resize', function() {

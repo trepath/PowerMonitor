@@ -699,6 +699,7 @@ def brokerQuickStats(broker_pq_clientid):
     if broker_pq_clientid != 'None' and broker_pq_clientid != 'undefined':
         sql_query_brokers += "AND b.pq_clientid = %s AND b.expiry >= NOW() - INTERVAL '1 month' and current_hotfixrid != hotfix_rid AND b.product_id LIKE '%PQ%' "
         sql_query_brokers += "AND b.testing is FALSE and b.demo is FALSE "
+        sql_query_brokers += "ORDER BY b.brokername ASC"
         cursor.execute(sql_query_brokers, (result[0], broker_pq_clientid))
     else:
         sql_query_brokers += "AND b.expiry >= NOW() - INTERVAL '1 month' "
@@ -706,6 +707,7 @@ def brokerQuickStats(broker_pq_clientid):
         sql_query_brokers += "AND b.testing is FALSE and b.demo is FALSE "
         sql_query_brokers += "AND b.brokername NOT LIKE '%%PowerSoft%%' "
         sql_query_brokers += "AND b.brokername NOT LIKE '%%Powersoft%%' "
+        sql_query_brokers += "ORDER BY b.brokername ASC"
         cursor.execute(sql_query_brokers, (result[0], result[0], ))
 
     results = cursor.fetchall()
