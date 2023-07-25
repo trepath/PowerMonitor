@@ -897,11 +897,120 @@ def graph_top_brokers():
         margin=dict(l=100, r=20, t=70, b=50)
     )
 
+    conn.close()
     # Cache the results
     cache['graph_top_brokers']['timestamp'] = time.time()
     cache['graph_top_brokers']['data'] = jsonify(fig.to_json())
 
     return cache['graph_top_brokers']['data']
+
+
+@app.route('/broker-detailed-history/<broker_pq_clientid>')
+@limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
+def brokerDetailedHistory(broker_pq_clientid):
+
+    print("brokerQuoteHistory: " + broker_pq_clientid)
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS
+    )
+    cursor = conn.cursor()
+
+    # First find the most recent pq hotfix
+    sql_query = (
+        """
+            SELECT COUNT(DISTINCT username) AS distinct_usernames_count
+            FROM public.log_service_requests
+            WHERE pq_clientid = %s
+            AND stamp >= NOW() - INTERVAL '30 days';
+        """
+    )
+
+    cursor.execute(sql_query, (broker_pq_clientid,))
+    result = cursor.fetchone()
+    numUsersActual = str(result[0])
+    print('NUmber of users who quoted: ' + numUsersActual)
+
+    # Find how many licenses the broker has
+    sql_query = (
+        """
+            SELECT numlicense
+            FROM public.broker
+            WHERE pq_clientid = %s;
+        """
+    )
+
+    cursor.execute(sql_query, (broker_pq_clientid,))
+    result = cursor.fetchone()
+    numUsersAllowed = str(result[0])
+    print('Number of users allowed: ' + numUsersAllowed)
+
+    # Find the number of quotes in the last 30 days
+    sql_query = (
+        """
+            SELECT details.status, COUNT(*) AS status_count
+            FROM public.log_service_requests AS requests
+            INNER JOIN public.log_service_requests_details AS details
+            ON requests.srnumber = details.srnumber
+            WHERE requests.pq_clientid = %s
+            AND requests.stamp >= NOW() - INTERVAL '30 days'
+            GROUP BY details.status;
+        """
+    )
+
+    cursor.execute(sql_query, (broker_pq_clientid,))
+    result = cursor.fetchall()
+    quoteStatusBreakdown = result
+
+    # Find the number of quotes in the last 30 days for last year
+    sql_query = (
+        """
+            SELECT details.status, COUNT(*) AS status_count
+            FROM public.log_service_requests AS requests
+            INNER JOIN public.log_service_requests_details AS details
+            ON requests.srnumber = details.srnumber
+            WHERE requests.pq_clientid = %s
+            AND requests.stamp >= NOW() - INTERVAL '1 year' - INTERVAL '30 days'
+            AND requests.stamp < NOW() - INTERVAL '1 year'
+            GROUP BY details.status;
+        """
+    )
+
+    cursor.execute(sql_query, (broker_pq_clientid,))
+    result = cursor.fetchall()
+    quoteStatusBreakdownLastYear = result
+
+    conn.close()
+
+    # Sample data for the pie chart
+
+    # Extract labels and values from the data array
+    labels = [item[0] for item in quoteStatusBreakdown]
+    values = [item[1] for item in quoteStatusBreakdown]
+
+    # Create the pie chart
+    fig = go.Figure(data=[go.Pie(labels=[status_labels[label] for label in labels], values=values,customdata=labels,      # Use status codes as custom data
+        hovertemplate='Status: %{customdata}<br>Value: %{value}<br>Percentage: %{percent}',  # Customize hover tooltip
+        marker=dict(colors=[status_colors[label] for label in labels])  # Set custom colors based on status codes
+    )])
+
+    # Set a title for the chart
+    fig.update_layout(title_text='Last Months Quote Status Breakdown')
+
+    # Create a dictionary to store the data
+    response_data = {
+        "numUsersActual": numUsersActual,
+        "numUsersAllowed": numUsersAllowed,
+        "quoteStatusBreakdown": quoteStatusBreakdown,
+        "quoteStatusBreakdownLastYear": quoteStatusBreakdownLastYear,
+        "pieChart": fig.to_json()
+    }
+
+    # Return the JSON response using jsonify
+    return jsonify(response_data)
+
 
 
 if __name__ == '__main__':

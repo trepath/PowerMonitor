@@ -111,6 +111,14 @@
             margin-left: 15px;
         }
 
+        #current-broker-stats{
+            flex: 1;
+            height: 100vh;
+            overflow-y: scroll;
+            padding: 10px;
+            margin-left: 15px;
+        }
+
         .tab {
             display: none;
         }
@@ -168,6 +176,16 @@
         .list div:nth-child(odd) {
             background-color: white;
         }
+
+        .plot-container {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        #quoting-history-pie-chart {
+            margin-left: 10px;
+        }
+
     </style>
 </head>
 <body>
@@ -942,6 +960,10 @@
                  fetch('/broker-quick-stats/'+'None')
                       .then(response => response.json())
                       .then(data => {
+                        // Clear details
+                        var details = document.getElementById('current-broker-stats');
+                        details.innerHTML = '';
+
                         // Create a new div container for the list
                         const listDiv = document.createElement('div');
                         listDiv.classList.add('list');
@@ -1082,6 +1104,8 @@ function toggleCollapsible(listItem,pq_clientid) {
 }
 
 function createRateEngines(pqClientID, contentContainer) {
+    createQuotingHistory(pqClientID);
+
     fetch('/broker-rate-engines/' + pqClientID)
       .then(response => response.json())
       .then(data => {
@@ -1124,6 +1148,106 @@ function createRateEngines(pqClientID, contentContainer) {
           contentContainer.appendChild(listDiv);
       });
 }
+
+    function createQuotingHistory(pq_clientid){
+        // Create a new div container
+        const div = document.createElement('div');
+        div.id = 'quoting-history';
+
+        // Fetch the quoting history for the broker
+        fetch('/broker-detailed-history/' + pq_clientid)
+              .then(response => response.json())
+              .then(data => {
+                console.log('Current Broker History:', data);
+                var container = document.getElementById('current-broker-stats');
+                container.innerHTML = '';
+
+                var chart_div = document.createElement('div');
+                chart_div.id = 'quoting-history-pie-chart';
+                chart_div.style.float = 'right';
+                container.appendChild(chart_div);
+
+                var parsedData = JSON.parse(data['pieChart']);
+
+                var layout = {
+                    ...parsedData.layout,
+                    width: 500,
+                    height: 500
+                };
+
+                Plotly.newPlot('quoting-history-pie-chart', parsedData.data, layout)
+                    .then(function(gd) {
+                        gd.on('plotly_click', handleHourlyGraphClick);
+                    });
+
+                var info_div = document.createElement('div');
+
+                // Using reduce() to find the total of the second element in the nested arrays
+                const total_this_year = data['quoteStatusBreakdown'].reduce((accumulator, currentArray) => {
+                  return accumulator + currentArray[1];
+                }, 0);
+
+                const total_last_year = data['quoteStatusBreakdownLastYear'].reduce((accumulator, currentArray) => {
+                  return accumulator + currentArray[1];
+                }, 0);
+
+                  const quoteTotalDiv = document.createElement('div');
+                  quoteTotalDiv.style.cssFloat = 'right'; // Align to the right
+
+                  // Check if the next two elements are the same
+                  const color = total_this_year > total_last_year ? 'green' : 'red';
+
+                  // Create a new div container for the span
+                  const div = document.createElement('div');
+                  div.style.fontWeight = 'bold';
+                  div.style.color = color;
+
+                  // Create a new span element
+                  const current_monthly_span = document.createElement('span');
+                  current_monthly_span.textContent = 'Current Monthly Quotes: ' + total_this_year;
+                  //span.style.color = color;
+                  current_monthly_span.style.color = color;
+                  current_monthly_span.style.cssFloat = 'right'; // Align to the right
+
+                   quoteTotalDiv.appendChild(current_monthly_span);
+
+                   quoteTotalDiv.appendChild(document.createElement('br')); // Add a line break (Fixed typo here)
+
+                   // Create a new span element
+                  const previous_monthly_span = document.createElement('span');
+                  previous_monthly_span.textContent = 'Historical Monthly Quotes: ' + total_last_year;
+                  previous_monthly_span.style.cssFloat = 'right'; // Align to the right
+
+                  quoteTotalDiv.appendChild(previous_monthly_span);
+
+                  info_div.appendChild(quoteTotalDiv);
+
+                   const usersDiv = document.createElement('div');
+                   usersDiv.style.cssFloat = 'left'; // Align to the left
+
+                   // Create a new span element
+                  const actualUsersSpan = document.createElement('span');
+                  actualUsersSpan.textContent = 'Active Users: ' + data['numUsersActual'];
+                  actualUsersSpan.style.cssFloat = 'left'; // Align to the right
+
+                  usersDiv.appendChild(actualUsersSpan);
+                  usersDiv.appendChild(document.createElement('br')); // Add a line break (Fixed typo here)
+
+
+                    // Create a new span element
+                  const allowedUsersSpan = document.createElement('span');
+                  allowedUsersSpan.textContent = 'Allowed Users: ' + data['numUsersAllowed'];
+                  allowedUsersSpan.style.cssFloat = 'left'; // Align to the right
+
+                  usersDiv.appendChild(allowedUsersSpan);
+                  usersDiv.appendChild(document.createElement('br')); // Add a line break (Fixed typo here)
+                  info_div.appendChild(usersDiv); // Add a line break (Fixed typo here)
+
+                   container.appendChild(info_div);
+
+                window.dispatchEvent(new Event('resize'));  // Dispatch resize event
+        });
+    }
 
     document.addEventListener('DOMContentLoaded', function() {
         loadBrokers();
