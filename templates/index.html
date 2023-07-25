@@ -87,6 +87,14 @@
             padding: 10px;
         }
 
+        #current-broker-details{
+            width: 35%;
+            height: 100vh;
+            overflow-y: scroll;
+            border-right: 1px solid #ccc;
+            padding: 10px;
+        }
+
         #file-content {
             flex: 1;
             height: 100vh;
@@ -898,7 +906,7 @@
                       span.textContent = 'Installed: ' + broker_version + ' Current: ' + current_version;
 
                       // Append the span element to the div container
-                      div.appendChild(span);
+                      //div.appendChild(span);
 
                       // Append the div container to the main element
                       main.appendChild(div);
@@ -993,19 +1001,19 @@
 
 function createBrokerDetails(item, contentContainer) {
     console.log('Creating broker details...');
+    console.log('item:', item);
     // Clear the contentContainer
     //contentContainer.innerHTML = '';
     var listItem = document.createElement('li');
     listItem.classList.add('collapsible'); // Add the 'collapsible' class to the listItem
     listItem.id = item[1];
 
+    // Check if the next two elements are the same
+    const color = item[4] == item[5] ? 'green' : 'red';
+
     var content = document.createElement('div');
     content.classList.add('content', 'collapsed');
     listItem.appendChild(content);
-
-    var valueSpan = document.createElement('span');
-    valueSpan.textContent = item[0];
-    content.appendChild(valueSpan);
 
     brokernameSpan = document.createElement('span');
     brokernameSpan.textContent = item[0];
@@ -1020,12 +1028,14 @@ function createBrokerDetails(item, contentContainer) {
 
     installedHotfixSpan = document.createElement('span');
     installedHotfixSpan.textContent = 'Installed PQ Hotfix: ' + item[4];
+    installedHotfixSpan.style.color = color;
     content.appendChild(installedHotfixSpan);
 
     content.appendChild(document.createElement('br')); // Add a line break
 
     currentHotfixSpan = document.createElement('span');
     currentHotfixSpan.textContent = 'Current PQ Hotfix: ' + item[5];
+    currentHotfixSpan.style.color = color;
     content.appendChild(currentHotfixSpan);
 
     content.appendChild(document.createElement('br')); // Add a line break
@@ -1060,7 +1070,6 @@ function toggleCollapsible(listItem,pq_clientid) {
             var content = listItems[i].firstElementChild;
             content.classList.add("collapsed");
         } else {
-
             var content = listItem.firstElementChild;
             // fetch the rate engines for the broker and display them
             createRateEngines(pq_clientid, content);
@@ -1101,9 +1110,11 @@ function createRateEngines(pqClientID, contentContainer) {
           // Create a new span element
           const span = document.createElement('span');
           span.textContent = firstThreeElements;
+          span.style.cssFloat = 'right'; // Align to the right
 
           // Append the span element to the div container
           div.appendChild(span);
+
 
           // Append the div container to the main element
           listDiv.appendChild(div);

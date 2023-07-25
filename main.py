@@ -692,14 +692,14 @@ def brokerQuickStats(broker_pq_clientid):
     if broker_pq_clientid != 'None' and broker_pq_clientid != 'undefined':
         # Find all the brokers that have an expiry date after 1 month ago, return all relevant data
         sql_query_brokers = (
-            "SELECT b.brokername, b.pq_clientid, b.prod_id, b.expiry, software_info.hotfix_rid as hotfix_rid "
+            "SELECT b.brokername, b.pq_clientid, b.prod_id, b.expiry, software_info.hotfix_rid as hotfix_rid, %s AS current_hotfixrid  "
             "FROM broker as b, software_info "
             "WHERE b.pq_clientid = software_info.pq_clientid "
         )
         sql_query_brokers += "AND b.pq_clientid = %s AND b.expiry >= NOW() - INTERVAL '1 month' and b.product_id LIKE '%%PQ%%' "
         sql_query_brokers += "AND b.testing is FALSE and b.demo is FALSE "
         sql_query_brokers += "ORDER BY b.brokername ASC"
-        cursor.execute(sql_query_brokers, (broker_pq_clientid, ))
+        cursor.execute(sql_query_brokers, (result[0], broker_pq_clientid, ))
     else:
         # Find all the brokers that have an expiry date after 1 month ago, return all relevant data
         sql_query_brokers = (
