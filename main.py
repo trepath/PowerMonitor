@@ -1011,6 +1011,60 @@ def brokerDetailedHistory(broker_pq_clientid):
     # Return the JSON response using jsonify
     return jsonify(response_data)
 
+@app.route('/broker-quoting-history/<broker_pq_clientid>')
+@limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
+def brokerQuotingHistory(broker_pq_clientid):
+
+    print("brokerQuoteHistory: " + broker_pq_clientid)
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS
+    )
+    cursor = conn.cursor()
+
+    # First find the most recent pq hotfix
+    sql_query = (
+        "SELECT date_trunc('month', lsr.stamp), COUNT(*) "
+        "FROM log_service_requests AS lsr "
+        "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
+        "WHERE lsr.stamp >= NOW() - INTERVAL '1 year' "
+        "AND lsr.pq_clientid = %s "
+        "GROUP BY date_trunc('month', lsr.stamp) "
+        "ORDER BY date_trunc('month', lsr.stamp) "
+    )
+
+    cursor.execute(sql_query, (broker_pq_clientid,))
+    results = cursor.fetchall()
+    conn.close()
+
+    # Extract data from the query results
+    months = []
+    statuses = []
+    counts = []
+
+    for row in results:
+        months.append(row[0].strftime('%b %Y'))  # Convert the timestamp to a string format
+        counts.append(row[1])
+
+    # Create the bar graph using Plotly
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(x=months, y=counts))
+
+    # Update layout and labels
+    fig.update_layout(
+        title_text='Broker Quoting History',
+        xaxis_title='Month',
+        yaxis_title='Number of Quotes'
+    )
+
+    # Show the bar graph
+    #fig.show()
+
+    # If you want to return the JSON response with Plotly data, use the following instead of fig.show()
+    return jsonify(fig.to_json())
 
 
 if __name__ == '__main__':

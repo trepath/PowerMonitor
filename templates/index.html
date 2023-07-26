@@ -218,7 +218,7 @@
         </div>
     </div>
     <div id="broker-status" class="tab">
-        <div id="current-broker-graph" style="width:100%;height:100%"></div>
+        <div id="current-broker-graph" style="width:100%;min-height: 425px;"></div>
         <select id="current-broker-dropdown">
             <!-- Broker options will be populated here by JavaScript -->
         </select>
@@ -960,6 +960,8 @@
                  fetch('/broker-quick-stats/'+'None')
                       .then(response => response.json())
                       .then(data => {
+                        // Reset the graph
+
                         // Clear details
                         var details = document.getElementById('current-broker-stats');
                         details.innerHTML = '';
@@ -1105,6 +1107,7 @@ function toggleCollapsible(listItem,pq_clientid) {
 
 function createRateEngines(pqClientID, contentContainer) {
     createQuotingHistory(pqClientID);
+    createGraphQuotingHistory(pqClientID);
 
     fetch('/broker-rate-engines/' + pqClientID)
       .then(response => response.json())
@@ -1247,6 +1250,22 @@ function createRateEngines(pqClientID, contentContainer) {
 
                 window.dispatchEvent(new Event('resize'));  // Dispatch resize event
         });
+    }
+
+    function createGraphQuotingHistory(pqClientID){
+                // Clear details
+                var details = document.getElementById('current-broker-graph');
+                details.innerHTML = '';
+
+                fetch('/broker-quoting-history/' + pqClientID)
+                .then(response => response.json())
+                .then(data => {
+                    var parsedData = JSON.parse(data);
+                    Plotly.newPlot('current-broker-graph', parsedData.data, parsedData.layout)
+                        .then(function(gd) {
+                            gd.on('plotly_click', handleBarClick);
+                        });
+                });
     }
 
     document.addEventListener('DOMContentLoaded', function() {
