@@ -908,6 +908,10 @@
                 .then(response => response.json())
                 .then(data => {
                     console.log('Current Broker Hotfix:', data);
+                        // Return if there is no data[0]
+                        if (data[0] === undefined) {
+                            return;
+                        }
                       const broker_version = data[0][2];
                       const current_version = data[0][3];
 
@@ -954,7 +958,12 @@
                           main.appendChild(itemContainer);
                             console.log('itemContainer:', itemContainer);
                             console.log('itemContainer collapsible:', itemContainer.getElementsByClassName("collapsible")[0]);
-                            toggleCollapsible(itemContainer.getElementsByClassName("collapsible")[0],selectedCurrentBroker);
+                            // if there are collapsible items, toggle them
+                            if (itemContainer.getElementsByClassName("collapsible")[0] !== undefined){
+                                toggleCollapsible(itemContainer.getElementsByClassName("collapsible")[0],selectedCurrentBroker);
+                            }
+
+                            createQuotingHistory(selectedCurrentBroker);
                       });
              }else{
                  fetch('/broker-quick-stats/'+'None')
@@ -1107,7 +1116,7 @@ function toggleCollapsible(listItem,pq_clientid) {
 
 function createRateEngines(pqClientID, contentContainer) {
     createQuotingHistory(pqClientID);
-    createGraphQuotingHistory(pqClientID);
+
 
     fetch('/broker-rate-engines/' + pqClientID)
       .then(response => response.json())

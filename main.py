@@ -34,7 +34,8 @@ status_colors = {
     6: 'rgb(200, 95, 0)',
     2: 'rgb(255, 0, 0)',
     400: 'rgb(0, 0, 255)',
-    200: 'rgb(0, 128, 128)'
+    200: 'rgb(0, 128, 128)',
+    300: 'rgb(0, 128, 128)'
     # Add more as needed
 }
 status_labels = {
@@ -46,7 +47,8 @@ status_labels = {
     6: 'JAWS Validation Error - Creds?',
     2: 'Critical Error WAWA',
     400: '400 - Broker Error',
-    200: '200 - Success DOC Credit'
+    200: '200 - Success DOC Credit',
+    300: '300 - Undocumented'
     # Add more as needed
 }
 
@@ -653,7 +655,7 @@ def currentBrokers():
         "SELECT DISTINCT broker.brokername, broker.pq_clientid "
         "FROM broker "
         "WHERE broker.expiry >= NOW() - INTERVAL '1 month' "
-        "AND (broker.product_id LIKE '%RC%' OR broker.product_id LIKE '%PQ%') "
+        "AND (broker.product_id LIKE '%RC%' OR broker.product_id LIKE '%PQ%' OR broker.product_id LIKE '%RQ%') "
         "ORDER BY broker.brokername ASC"
     )
 
