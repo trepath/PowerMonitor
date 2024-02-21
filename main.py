@@ -17,6 +17,7 @@ config.read('config.ini')
 
 # PostgreSQL connection details
 DB_HOST = config['PostgreSQL']['DB_HOST']
+DB_HOST_MAIN = config['PostgreSQL']['DB_HOST_MAIN']
 DB_NAME = config['PostgreSQL']['DB_NAME']
 DB_USER = config['PostgreSQL']['DB_USER']
 DB_PASS = config['PostgreSQL']['DB_PASS']
@@ -1067,6 +1068,54 @@ def brokerQuotingHistory(broker_pq_clientid):
 
     # If you want to return the JSON response with Plotly data, use the following instead of fig.show()
     return jsonify(fig.to_json())
+
+
+@app.route('/health-check')
+@limiter.limit("30/minute")
+def healthCheck():
+    try:
+        # Attempt to connect to the database
+        conn = psycopg2.connect(
+            host=DB_HOST_MAIN,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASS
+        )
+        cursor = conn.cursor()
+
+        # Your query
+        query = """
+        SELECT COUNT(*)
+        FROM public.rw_progresslog
+        WHERE rstamp >= CURRENT_DATE
+        AND service = 'IAR'
+        AND status = 'NO RESPONSE';
+        """
+
+        cursor.execute(query)
+        count = cursor.fetchone()[0]  # Fetch the count result
+
+        # Determine status and color based on the count
+        if count == 0:
+            health_status = "No 'NO RESPONSE' entries today - All systems operational"
+            color = "green"
+        elif count < 5:
+            health_status = f"'NO RESPONSE' entries today: {count} - Monitor systems"
+            color = "orange"
+        else:
+            health_status = f"'NO RESPONSE' entries today: {count} - System issues detected"
+            color = "red"
+
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        # Handle the exception if the connection to the database fails
+        health_status = "Unable to connect to the SQL server - Critical system issue"
+        color = "red"
+        # Optionally, you can log the exception message for debugging
+        print("Database connection failed:", str(e))
+
+    return jsonify({"status": health_status, "color": color})
 
 
 if __name__ == '__main__':

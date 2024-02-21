@@ -185,6 +185,14 @@
         #quoting-history-pie-chart {
             margin-left: 10px;
         }
+        @keyframes flashRed {
+            0%, 100% { background-color: red; color: white; }
+            50% { background-color: white; color: red; }
+        }
+
+        .flash-red {
+            animation: flashRed 1s infinite;
+        }
 
     </style>
 </head>
@@ -193,6 +201,8 @@
     <button id="request-per-hour-button" onclick="switchTab('request-per-hour')">JAWS Server Stats</button>
     <button id="company-status-button" onclick="switchTab('company-status')">Company Status</button>
     <button id="broker-status-button" onclick="switchTab('broker-status')">Broker Stats</button>
+    <!-- New element for displaying health check status -->
+    <span id="health-check-status" style="color: red; font-weight: bold;"></span>
 </div>
 <div id="main-frame">
     <div id="request-per-hour" class="tab active">
@@ -1298,6 +1308,34 @@ function createRateEngines(pqClientID, contentContainer) {
 
         var serverDropdown = document.getElementById('server-dropdown');
         serverDropdown.addEventListener('change', handleServerDropDownChange);
+
+        // Function to update health check status and color
+        function updateHealthCheckStatus() {
+            fetch('/health-check')
+                .then(response => response.json())
+                .then(data => {
+                    const statusElement = document.getElementById('health-check-status');
+                    statusElement.textContent = data.status;
+                    statusElement.style.color = data.color === 'red' ? 'white' : 'initial'; // Set text color to white if red, else default
+                    statusElement.style.backgroundColor = data.color === 'red' ? 'red' : 'initial'; // Set background to red if red, else default
+
+                    // Conditionally apply the flashing effect
+                    if (data.color === 'red') {
+                        statusElement.classList.add('flash-red');
+                    } else {
+                        statusElement.classList.remove('flash-red');
+                        statusElement.style.color = data.color; // Apply the color as text color
+                    }
+                })
+                .catch(error => console.error('Error fetching health check status:', error));
+        }
+
+
+        // Update health check status every 30 seconds
+        setInterval(updateHealthCheckStatus, 30000);
+
+        // Initial update on page load
+        updateHealthCheckStatus();
     });
 
 </script>
