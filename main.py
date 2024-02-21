@@ -1073,6 +1073,8 @@ def brokerQuotingHistory(broker_pq_clientid):
 @app.route('/health-check')
 @limiter.limit("30/minute")
 def healthCheck():
+    messages = []
+
     try:
         # Attempt to connect to the database
         conn = psycopg2.connect(
@@ -1097,7 +1099,7 @@ def healthCheck():
 
         # Determine status and color based on the count
         if count == 0:
-            health_status = "No 'NO RESPONSE' entries today - All systems operational"
+            health_status = "All systems operational"
             color = "green"
         elif count < 5:
             health_status = f"'NO RESPONSE' entries today: {count} - Monitor systems"
@@ -1115,7 +1117,14 @@ def healthCheck():
         # Optionally, you can log the exception message for debugging
         print("Database connection failed:", str(e))
 
-    return jsonify({"status": health_status, "color": color})
+    #return jsonify({"status": health_status, "color": color})
+    messages.append({"status": health_status, "color": color})
+
+    # Add more health checks here
+
+
+    # Wrap messages in an object
+    return jsonify({"messages": messages})
 
 
 if __name__ == '__main__':

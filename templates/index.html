@@ -194,6 +194,11 @@
             animation: flashRed 1s infinite;
         }
 
+        #health-check-status-container span {
+        margin-left: auto; /* Push the status to the right */
+        padding: 5px; /* Optional padding */
+        }
+
     </style>
 </head>
 <body>
@@ -202,7 +207,8 @@
     <button id="company-status-button" onclick="switchTab('company-status')">Company Status</button>
     <button id="broker-status-button" onclick="switchTab('broker-status')">Broker Stats</button>
     <!-- New element for displaying health check status -->
-    <span id="health-check-status" style="color: red; font-weight: bold;"></span>
+    <span id="health-check-status-container" style="color: red; font-weight: bold;"></span>
+    <!-- <span id="health-check-status-container"></span>-->
 </div>
 <div id="main-frame">
     <div id="request-per-hour" class="tab active">
@@ -1314,20 +1320,23 @@ function createRateEngines(pqClientID, contentContainer) {
             fetch('/health-check')
                 .then(response => response.json())
                 .then(data => {
-                    const statusElement = document.getElementById('health-check-status');
-                    statusElement.textContent = data.status;
-                    statusElement.style.color = data.color === 'red' ? 'white' : 'initial'; // Set text color to white if red, else default
-                    statusElement.style.backgroundColor = data.color === 'red' ? 'red' : 'initial'; // Set background to red if red, else default
+                    const container = document.getElementById('health-check-status-container');
+                    // Clear the container before adding new messages
+                    container.innerHTML = '';
 
-                    // Conditionally apply the flashing effect
-                    if (data.color === 'red') {
-                        statusElement.classList.add('flash-red');
-                    } else {
-                        statusElement.classList.remove('flash-red');
-                        statusElement.style.color = data.color; // Apply the color as text color
-                    }
+                    // Loop through each message in the response
+                    data.messages.forEach(msg => {
+                        const span = document.createElement('span');
+                        span.textContent = msg.status;
+                        span.style.color = msg.color;
+                        span.style.fontWeight = 'bold'; // Example of applying additional styling
+                        // Add a little space or a new line after each span if desired
+                        //span.style.display = 'block'; // Makes each span appear on a new line
+
+                        container.appendChild(span);
+                    });
                 })
-                .catch(error => console.error('Error fetching health check status:', error));
+                .catch(error => console.error('Error fetching health check statuses:', error));
         }
 
 
