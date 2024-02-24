@@ -328,6 +328,8 @@ def brokers(server):
 
     results = cursor.fetchall()
     print(results)
+    # Close the cursor and the connection
+    cursor.close()
     conn.close()
 
     return jsonify(results)
@@ -664,6 +666,9 @@ def currentBrokers():
 
     results = cursor.fetchall()
     print(results)
+
+    # Close the cursor and the connection
+    cursor.close()
     conn.close()
     return jsonify(results)
 
@@ -721,6 +726,8 @@ def brokerQuickStats(broker_pq_clientid):
     results = cursor.fetchall()
     print(results)
 
+    # Close the cursor and the connection
+    cursor.close()
     conn.close()
 
     return jsonify(results)
@@ -755,6 +762,8 @@ def brokerRateEngines(broker_pq_clientid):
     results = cursor.fetchall()
     print(results)
 
+    # Close the cursor and the connection
+    cursor.close()
     conn.close()
 
     return jsonify(results)
@@ -790,6 +799,8 @@ def brokerHotfix(broker_pq_clientid):
     results = cursor.fetchall()
     print(results)
 
+    # Close the cursor and the connection
+    cursor.close()
     conn.close()
 
     return jsonify(results)
@@ -825,6 +836,8 @@ def brokerQuoteHistory(broker_pq_clientid):
     results = cursor.fetchall()
     print(results)
 
+    # Close the cursor and the connection
+    cursor.close()
     conn.close()
 
     return jsonify(results)
@@ -900,7 +913,10 @@ def graph_top_brokers():
         margin=dict(l=100, r=20, t=70, b=50)
     )
 
+    # Close the cursor and the connection
+    cursor.close()
     conn.close()
+
     # Cache the results
     cache['graph_top_brokers']['timestamp'] = time.time()
     cache['graph_top_brokers']['data'] = jsonify(fig.to_json())
@@ -985,6 +1001,8 @@ def brokerDetailedHistory(broker_pq_clientid):
     result = cursor.fetchall()
     quoteStatusBreakdownLastYear = result
 
+    # Close the cursor and the connection
+    cursor.close()
     conn.close()
 
     # Sample data for the pie chart
@@ -1040,6 +1058,9 @@ def brokerQuotingHistory(broker_pq_clientid):
 
     cursor.execute(sql_query, (broker_pq_clientid,))
     results = cursor.fetchall()
+
+    # Close the cursor and the connection
+    cursor.close()
     conn.close()
 
     # Extract data from the query results
@@ -1091,6 +1112,7 @@ def healthCheck():
         FROM public.rw_progresslog
         WHERE rstamp >= CURRENT_DATE
         AND service = 'IAR'
+        AND server != 'UATRater1'
         AND status = 'NO RESPONSE';
         """
 
@@ -1116,6 +1138,14 @@ def healthCheck():
         color = "red"
         # Optionally, you can log the exception message for debugging
         print("Database connection failed:", str(e))
+
+        # Close the cursor and the connection
+        cursor.close()
+        conn.close()
+    finally:
+        # Close the cursor and the connection
+        cursor.close()
+        conn.close()
 
     #return jsonify({"status": health_status, "color": color})
     messages.append({"status": health_status, "color": color})
