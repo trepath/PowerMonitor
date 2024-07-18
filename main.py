@@ -473,7 +473,7 @@ def graph_data_last_hour():
         "SELECT date_trunc('hour', lsr.stamp) as hour, lsd.insurer, lsd.status, COUNT(*) "
         "FROM log_service_requests AS lsr "
         "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
-        "WHERE lsr.stamp >= NOW() - INTERVAL '1 hour' and (lsd.responsetime != 0 and lsd.status != 0) "
+        "WHERE lsr.stamp >= NOW() - INTERVAL '1 hour' and not (lsd.responsetime = 0 and lsd.status = 0 and lsd.insurer = 'PEA') "
     )
 
     if server != 'none':
@@ -1161,30 +1161,30 @@ def healthCheck():
 
 jawsServers = [
     {'name': '<a href="https://jaws.power-soft.com/balancer">jaws.power-soft.com</a>', 'url': 'https://jaws.power-soft.com/axis2/services/ServiceProvider?wsdl', 'expected_text': 'Grabenwerks Service'},
-    {'name': 'prodjaws1.servpoint.net', 'url': 'http://prodjaws1.servpoint.net/axis2/services/ServiceProvider?wsdl', 'expected_text': 'Grabenwerks Service'},
-    {'name': 'prodjaws2.servpoint.net', 'url': 'http://prodjaws2.servpoint.net/axis2/services/ServiceProvider?wsdl', 'expected_text': 'Grabenwerks Service'},
-    {'name': 'prodjaws3.servpoint.net', 'url': 'http://prodjaws3.servpoint.net/axis2/services/ServiceProvider?wsdl', 'expected_text': 'Grabenwerks Service'},
+    {'name': '<a href="http://prodjaws1.servpoint.net/axis2/services/ServiceProvider?wsdl">prodjaws1.servpoint.net</a>', 'url': 'http://prodjaws1.servpoint.net/axis2/services/ServiceProvider?wsdl', 'expected_text': 'Grabenwerks Service'},
+    {'name': '<a href="http://prodjaws2.servpoint.net/axis2/services/ServiceProvider?wsdl">prodjaws2.servpoint.net</a>', 'url': 'http://prodjaws2.servpoint.net/axis2/services/ServiceProvider?wsdl', 'expected_text': 'Grabenwerks Service'},
+    {'name': '<a href="http://prodjaws3.servpoint.net/axis2/services/ServiceProvider?wsdl">prodjaws3.servpoint.net</a>', 'url': 'http://prodjaws3.servpoint.net/axis2/services/ServiceProvider?wsdl', 'expected_text': 'Grabenwerks Service'},
     {'name': '<a href="https://jawstest.power-soft.com/balancer">jawstest.power-soft.com</a>', 'url': 'https://jaws.power-soft.com/axis2/services/ServiceProvider?wsdl',
      'expected_text': 'Grabenwerks Service'},
-    {'name': 'uatjaws1.servpoint.net', 'url': 'http://uatjaws1.servpoint.net/axis2/services/ServiceProvider?wsdl',
+    {'name': '<a href="http://uatjaws1.servpoint.net/axis2/services/ServiceProvider?wsdl">uatjaws1.servpoint.net</a>', 'url': 'http://uatjaws1.servpoint.net/axis2/services/ServiceProvider?wsdl',
      'expected_text': 'Grabenwerks Service'},
-    {'name': 'uatjaws2.servpoint.net', 'url': 'http://uatjaws2.servpoint.net/axis2/services/ServiceProvider?wsdl',
+    {'name': '<a href="http://uatjaws2.servpoint.net/axis2/services/ServiceProvider?wsdl">uatjaws2.servpoint.net</a>', 'url': 'http://uatjaws2.servpoint.net/axis2/services/ServiceProvider?wsdl',
      'expected_text': 'Grabenwerks Service'},
-    {'name': 'devjaws1.powersoft.net', 'url': 'http://devjaws1.powersoft.net/axis2/services/ServiceProvider?wsdl',
+    {'name': '<a href="http://devjaws1.powersoft.net/axis2/services/ServiceProvider?wsdl">devjaws1.powersoft.net</a>', 'url': 'http://devjaws1.powersoft.net/axis2/services/ServiceProvider?wsdl',
      'expected_text': 'Grabenwerks Service'},
     # Add more servers as needed
 ]
 
 rateworksServers = [
     {'name': '<a href="http://prodraterspool.servpoint.net/balancer">prodraterspool.servpoint.net</a>', 'url': 'http://prodraterspool.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
-    {'name': 'prodrater1.servpoint.net', 'url': 'http://prodrater1.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
-    {'name': 'prodrater2.servpoint.net', 'url': 'http://prodrater2.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
-    {'name': 'prodrater3.servpoint.net', 'url': 'http://prodrater3.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
-    {'name': 'prodrater4.servpoint.net', 'url': 'http://prodrater4.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
+    {'name': '<a href="http://prodrater1.servpoint.net/rateworks.wsdl">prodrater1.servpoint.net</a>', 'url': 'http://prodrater1.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
+    {'name': '<a href="http://prodrater2.servpoint.net/rateworks.wsdl">prodrater2.servpoint.net</a>', 'url': 'http://prodrater2.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
+    {'name': '<a href="http://prodrater3.servpoint.net/rateworks.wsdl">prodrater3.servpoint.net</a>', 'url': 'http://prodrater3.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
+    {'name': '<a href="http://prodrater4.servpoint.net/rateworks.wsdl">prodrater4.servpoint.net</a>', 'url': 'http://prodrater4.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
     {'name': '<a href="http://uatraterspool.servpoint.net/balancer">uatraterspool.servpoint.net</a>', 'url': 'http://uatraterspool.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
-    {'name': 'uatrater1.servpoint.net', 'url': 'http://uatrater1.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
-    {'name': 'uatrater2.servpoint.net', 'url': 'http://uatrater2.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
-    {'name': 'qarater1.servpoint.net', 'url': 'http://qarater1.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
+    {'name': '<a href="http://uatrater1.servpoint.net/rateworks.wsdl">uatrater1.servpoint.net</a>', 'url': 'http://uatrater1.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
+    {'name': '<a href="http://uatrater2.servpoint.net/rateworks.wsdl">uatrater2.servpoint.net</a>', 'url': 'http://uatrater2.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
+    {'name': '<a href="http://qarater1.servpoint.net/rateworks.wsdl">qarater1.servpoint.net</a>', 'url': 'http://qarater1.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
 ]
 
 def check_server_status(url, expected_text):
