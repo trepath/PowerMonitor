@@ -1168,6 +1168,8 @@ jawsServers = [
      'expected_text': 'Grabenwerks Service'},
     {'name': 'uatjaws1.servpoint.net', 'url': 'http://uatjaws1.servpoint.net/axis2/services/ServiceProvider?wsdl',
      'expected_text': 'Grabenwerks Service'},
+    {'name': 'uatjaws2.servpoint.net', 'url': 'http://uatjaws2.servpoint.net/axis2/services/ServiceProvider?wsdl',
+     'expected_text': 'Grabenwerks Service'},
     {'name': 'devjaws1.servpoint.net', 'url': 'http://devjaws1.powersoft.net/axis2/services/ServiceProvider?wsdl',
      'expected_text': 'Grabenwerks Service'},
     # Add more servers as needed
