@@ -473,7 +473,7 @@ def graph_data_last_hour():
         "SELECT date_trunc('hour', lsr.stamp) as hour, lsd.insurer, lsd.status, COUNT(*) "
         "FROM log_service_requests AS lsr "
         "JOIN log_service_requests_details AS lsd ON lsr.srnumber = lsd.srnumber "
-        "WHERE lsr.stamp >= NOW() - INTERVAL '1 hour' "
+        "WHERE lsr.stamp >= NOW() - INTERVAL '1 hour' and (lsd.responsetime != 0 and lsd.status != 0) "
     )
 
     if server != 'none':
@@ -1170,7 +1170,7 @@ jawsServers = [
      'expected_text': 'Grabenwerks Service'},
     {'name': 'uatjaws2.servpoint.net', 'url': 'http://uatjaws2.servpoint.net/axis2/services/ServiceProvider?wsdl',
      'expected_text': 'Grabenwerks Service'},
-    {'name': 'devjaws1.servpoint.net', 'url': 'http://devjaws1.powersoft.net/axis2/services/ServiceProvider?wsdl',
+    {'name': 'devjaws1.powersoft.net', 'url': 'http://devjaws1.powersoft.net/axis2/services/ServiceProvider?wsdl',
      'expected_text': 'Grabenwerks Service'},
     # Add more servers as needed
 ]
