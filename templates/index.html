@@ -305,18 +305,16 @@
                 .then(response => response.json())
                 .then(data => {
                     var parsedData = JSON.parse(data);
+                    parsedData.layout.width = document.getElementById('bar-graph').clientWidth;
+                    parsedData.layout.height = document.getElementById('bar-graph').clientHeight;
+
                     Plotly.react('bar-graph', parsedData.data, parsedData.layout);
                 });
             setTimeout(loadBarGraph, 60000);
 
-            window.addEventListener('resize', function() {
-                var container = document.getElementById('bar-graph');
-                var width = container.offsetWidth;
-
-                Plotly.relayout('bar-graph', {
-                    width: width
-                });
-            });
+            // Remove any existing resize event listeners to prevent multiple listeners
+            window.removeEventListener('resize', handleResize);
+            window.addEventListener('resize', handleResize);
         } else {
             console.log('Loading minute detail data...');
             var dropdownServer = document.getElementById('server-dropdown');
@@ -326,9 +324,18 @@
                 .then(response => response.json())
                 .then(data => {
                     var parsedData = JSON.parse(data);
+                    parsedData.layout.width = document.getElementById('bar-graph').clientWidth;
+                    parsedData.layout.height = document.getElementById('bar-graph').clientHeight;
+
                     Plotly.react('bar-graph', parsedData.data, parsedData.layout);
                 });
         }
+    }
+
+    function handleResize() {
+        var container = document.getElementById('bar-graph');
+        var width = container.clientWidth;
+        Plotly.relayout('bar-graph', { width: width });
     }
 
 
@@ -513,7 +520,7 @@
     function createDownloadButton(url, label, responsefile) {
         var button = document.createElement('button');
         button.textContent = label;
-                
+
           // Disable the button if responsefile is empty or null
           if (!responsefile) {
             button.disabled = true;
@@ -731,26 +738,27 @@
             .then(data => {
                 var parsedData = JSON.parse(data);
 
-                // Get the container's size
-                var container = document.getElementById('hourly-graph');
-                var layout = {
-                    ...parsedData.layout,
-                    width: container.offsetWidth,
-                    height: container.offsetHeight
-                };
+                parsedData.layout.width = document.getElementById('hourly-graph').clientWidth;
+                parsedData.layout.height = document.getElementById('hourly-graph').clientHeight;
 
-                Plotly.newPlot('hourly-graph', parsedData.data, layout)
+                Plotly.react('hourly-graph', parsedData.data, parsedData.layout)
                     .then(function(gd) {
                         gd.on('plotly_click', handleHourlyGraphClick);
                     });
 
-                window.dispatchEvent(new Event('resize'));  // Dispatch resize event
+                // Remove any existing resize event listeners to prevent multiple listeners
+                window.removeEventListener('resize', handleHourlyResize);
+                window.addEventListener('resize', handleHourlyResize);
             });
 
         setTimeout(loadHourlyGraph, 60000);  // Call this function again after 1 minute
+    }
 
-        // Add resize event listener to dynamically resize the plot
-
+    function handleHourlyResize() {
+        var container = document.getElementById('hourly-graph');
+        var width = container.clientWidth;
+        var height = container.clientHeight;
+        Plotly.relayout('hourly-graph', { width: width, height: height });
     }
 
     function loadServers() {

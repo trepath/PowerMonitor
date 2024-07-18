@@ -1199,12 +1199,12 @@ def check_server_status(url, expected_text):
 @app.route('/server-status')
 @limiter.limit("30/minute")
 def server_status():
-    status_html = 'Jaws Servers<br>'
+    status_html = '<br><b>Jaws Servers</b><br>'
     for server in jawsServers:
         color = check_server_status(server['url'], server['expected_text'])
         status_html += f'<div style="background-color: {color}; padding: 5px; margin: 2px; height: 12px;">{server["name"]}</div>'
 
-    status_html += '<br>Rateworks Servers<br>'
+    status_html += '<br><b>Rateworks Servers</b><br>'
     for server in rateworksServers:
         color = check_server_status(server['url'], server['expected_text'])
         status_html += f'<div style="background-color: {color}; padding: 5px; margin: 2px; height: 12px;">{server["name"]}</div>'
