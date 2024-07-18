@@ -199,6 +199,26 @@
         padding: 5px; /* Optional padding */
         }
 
+        .side-by-side-container {
+            display: flex;
+            gap: 10px; /* Optional: adds space between the two divs */
+        }
+
+        #bar-graph {
+            flex: 8;
+        }
+
+        #current-broker-graph {
+            flex: 8;
+        }
+
+        #hourly-request-graph {
+            flex: 8;
+        }
+
+        .server-status {
+            flex: 2;
+        }
     </style>
 </head>
 <body>
@@ -212,7 +232,12 @@
 </div>
 <div id="main-frame">
     <div id="request-per-hour" class="tab active">
-        <div id="bar-graph" class="rounder_corner"></div>
+        <!-- Add side bar with server status -->
+        <div class="side-by-side-container">
+            <div id="bar-graph" class="rounder_corner"></div>
+            <div class="rounder_corner server-status">Servernames</div>
+        </div>
+
         <button id="back-button">Back</button>
         <select id="server-dropdown">
             <option value="Production">Production</option>
@@ -227,14 +252,24 @@
         </div>
     </div>
     <div id="company-status" class="tab">
-        <div id="hourly-graph" style="width:100%;height:100%"></div>
+                <!-- Add side bar with server status -->
+        <div class="side-by-side-container">
+            <div id="hourly-graph" class="rounder_corner"></div>
+            <div class="rounder_corner server-status">Servernames</div>
+        </div>
+
         <div class="container">
             <div class="rounder_corner" id="insurer-detail-list"></div>
             <div class="rounder_corner"  id="insurer-file-content"></div>
         </div>
     </div>
     <div id="broker-status" class="tab">
-        <div id="current-broker-graph" style="width:100%;min-height: 425px;"></div>
+                <!-- Add side bar with server status -->
+        <div class="side-by-side-container">
+            <div id="current-broker-graph" class="rounder_corner"></div>
+            <div class="rounder_corner server-status">Servernames</div>
+        </div>
+
         <select id="current-broker-dropdown">
             <!-- Broker options will be populated here by JavaScript -->
         </select>
@@ -280,6 +315,7 @@
             setTimeout(loadBarGraph, 60000);  // Call this function again after 60 seconds
 
             // Add resize event listener to dynamically resize the plot
+
             window.addEventListener('resize', function() {
                 var container = document.getElementById('bar-graph');
                 var width = container.offsetWidth;
