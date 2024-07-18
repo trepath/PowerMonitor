@@ -6,8 +6,10 @@ import pandas as pd
 import psycopg2
 import plotly.graph_objects as go
 import plotly.io as pio
-from flask import Flask, render_template, jsonify, send_file, request, abort
+import requests as requests
+from flask import Flask, render_template, jsonify, send_file, request, abort, render_template_string
 from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from flask_limiter.util import get_remote_address
 
@@ -1156,6 +1158,59 @@ def healthCheck():
     # Wrap messages in an object
     return jsonify({"messages": messages})
 
+
+jawsServers = [
+    {'name': 'jaws.power-soft.com', 'url': 'https://jaws.power-soft.com/axis2/services/ServiceProvider?wsdl', 'expected_text': 'Grabenwerks Service'},
+    {'name': 'prodjaws1.servpoint.net', 'url': 'http://prodjaws1.servpoint.net/axis2/services/ServiceProvider?wsdl', 'expected_text': 'Grabenwerks Service'},
+    {'name': 'prodjaws2.servpoint.net', 'url': 'http://prodjaws2.servpoint.net/axis2/services/ServiceProvider?wsdl', 'expected_text': 'Grabenwerks Service'},
+    {'name': 'prodjaws3.servpoint.net', 'url': 'http://prodjaws3.servpoint.net/axis2/services/ServiceProvider?wsdl', 'expected_text': 'Grabenwerks Service'},
+    {'name': 'jawstest.power-soft.com', 'url': 'https://jaws.power-soft.com/axis2/services/ServiceProvider?wsdl',
+     'expected_text': 'Grabenwerks Service'},
+    {'name': 'uatjaws1.servpoint.net', 'url': 'http://uatjaws1.servpoint.net/axis2/services/ServiceProvider?wsdl',
+     'expected_text': 'Grabenwerks Service'},
+    {'name': 'devjaws1.servpoint.net', 'url': 'http://devjaws1.powersoft.net/axis2/services/ServiceProvider?wsdl',
+     'expected_text': 'Grabenwerks Service'},
+    # Add more servers as needed
+]
+
+rateworksServers = [
+    {'name': 'prodraterspool.servpoint.net', 'url': 'http://prodraterspool.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
+    {'name': 'prodrater1.servpoint.net', 'url': 'http://prodrater1.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
+    {'name': 'prodrater2.servpoint.net', 'url': 'http://prodrater2.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
+    {'name': 'prodrater3.servpoint.net', 'url': 'http://prodrater3.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
+    {'name': 'prodrater4.servpoint.net', 'url': 'http://prodrater4.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
+    {'name': 'uatraterspool.servpoint.net', 'url': 'http://uatraterspool.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
+    {'name': 'uatrater1.servpoint.net', 'url': 'http://uatrater1.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
+    {'name': 'uatrater2.servpoint.net', 'url': 'http://uatrater2.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
+    {'name': 'qarater1.servpoint.net', 'url': 'http://qarater1.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
+]
+
+def check_server_status(url, expected_text):
+    try:
+        response = requests.get(url)
+        if expected_text in response.text:
+            return '#64C864'  # Olive color
+        else:
+            return 'red'
+    except Exception as e:
+        print(f"Error checking server {url}: {e}")
+        return 'red'
+
+@app.route('/server-status')
+@limiter.limit("30/minute")
+def server_status():
+    status_html = 'Jaws Servers<br>'
+    for server in jawsServers:
+        color = check_server_status(server['url'], server['expected_text'])
+        status_html += f'<div style="background-color: {color}; padding: 5px; margin: 2px; height: 12px;">{server["name"]}</div>'
+
+    status_html += '<br>Rateworks Servers<br>'
+    for server in rateworksServers:
+        color = check_server_status(server['url'], server['expected_text'])
+        status_html += f'<div style="background-color: {color}; padding: 5px; margin: 2px; height: 12px;">{server["name"]}</div>'
+
+
+    return render_template_string(status_html)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)

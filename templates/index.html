@@ -1307,6 +1307,24 @@ function createRateEngines(pqClientID, contentContainer) {
                 });
     }
 
+
+    function fetchServerStatus() {
+        fetch('/server-status')
+            .then(response => response.text())
+            .then(data => {
+                document.querySelectorAll('.server-status').forEach(element => {
+                    element.innerHTML = data;
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching server statuses:', error);
+                document.querySelectorAll('.server-status').forEach(element => {
+                    element.innerHTML = 'Failed to load server statuses.';
+                });
+            });
+    }
+
+
     document.addEventListener('DOMContentLoaded', function() {
         loadBrokers();
         loadBarGraph();
@@ -1359,6 +1377,9 @@ function createRateEngines(pqClientID, contentContainer) {
 
         // Initial update on page load
         updateHealthCheckStatus();
+
+        // Call the fetchServerStatus function to populate the server status on page load
+        fetchServerStatus();
     });
 
 </script>
