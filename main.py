@@ -1160,11 +1160,11 @@ def healthCheck():
 
 
 jawsServers = [
-    {'name': 'jaws.power-soft.com', 'url': 'https://jaws.power-soft.com/axis2/services/ServiceProvider?wsdl', 'expected_text': 'Grabenwerks Service'},
+    {'name': '<a href="https://jaws.power-soft.com/balancer">jaws.power-soft.com</a>', 'url': 'https://jaws.power-soft.com/axis2/services/ServiceProvider?wsdl', 'expected_text': 'Grabenwerks Service'},
     {'name': 'prodjaws1.servpoint.net', 'url': 'http://prodjaws1.servpoint.net/axis2/services/ServiceProvider?wsdl', 'expected_text': 'Grabenwerks Service'},
     {'name': 'prodjaws2.servpoint.net', 'url': 'http://prodjaws2.servpoint.net/axis2/services/ServiceProvider?wsdl', 'expected_text': 'Grabenwerks Service'},
     {'name': 'prodjaws3.servpoint.net', 'url': 'http://prodjaws3.servpoint.net/axis2/services/ServiceProvider?wsdl', 'expected_text': 'Grabenwerks Service'},
-    {'name': 'jawstest.power-soft.com', 'url': 'https://jaws.power-soft.com/axis2/services/ServiceProvider?wsdl',
+    {'name': '<a href="https://jawstest.power-soft.com/balancer">jawstest.power-soft.com</a>', 'url': 'https://jaws.power-soft.com/axis2/services/ServiceProvider?wsdl',
      'expected_text': 'Grabenwerks Service'},
     {'name': 'uatjaws1.servpoint.net', 'url': 'http://uatjaws1.servpoint.net/axis2/services/ServiceProvider?wsdl',
      'expected_text': 'Grabenwerks Service'},
@@ -1176,12 +1176,12 @@ jawsServers = [
 ]
 
 rateworksServers = [
-    {'name': 'prodraterspool.servpoint.net', 'url': 'http://prodraterspool.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
+    {'name': '<a href="http://prodraterspool.servpoint.net/balancer">prodraterspool.servpoint.net</a>', 'url': 'http://prodraterspool.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
     {'name': 'prodrater1.servpoint.net', 'url': 'http://prodrater1.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
     {'name': 'prodrater2.servpoint.net', 'url': 'http://prodrater2.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
     {'name': 'prodrater3.servpoint.net', 'url': 'http://prodrater3.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
     {'name': 'prodrater4.servpoint.net', 'url': 'http://prodrater4.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
-    {'name': 'uatraterspool.servpoint.net', 'url': 'http://uatraterspool.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
+    {'name': '<a href="http://uatraterspool.servpoint.net/balancer">uatraterspool.servpoint.net</a>', 'url': 'http://uatraterspool.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
     {'name': 'uatrater1.servpoint.net', 'url': 'http://uatrater1.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
     {'name': 'uatrater2.servpoint.net', 'url': 'http://uatrater2.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
     {'name': 'qarater1.servpoint.net', 'url': 'http://qarater1.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
