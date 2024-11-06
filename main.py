@@ -1097,43 +1097,38 @@ def brokerQuotingHistory(broker_pq_clientid):
 @limiter.limit("30/minute")
 def healthCheck():
     messages = []
-
     try:
-        # Attempt to connect to the database
-        conn = psycopg2.connect(
+        # Use context managers for the database connection and cursor
+        with psycopg2.connect(
             host=DB_HOST_MAIN,
             database=DB_NAME,
             user=DB_USER,
             password=DB_PASS
-        )
-        cursor = conn.cursor()
+        ) as conn:
+            with conn.cursor() as cursor:
+                # Your query
+                query = """
+                SELECT COUNT(*)
+                FROM public.rw_progresslog
+                WHERE rstamp >= CURRENT_DATE
+                AND service = 'IAR'
+                AND server != 'UATRater1'
+                AND status = 'NO RESPONSE';
+                """
 
-        # Your query
-        query = """
-        SELECT COUNT(*)
-        FROM public.rw_progresslog
-        WHERE rstamp >= CURRENT_DATE
-        AND service = 'IAR'
-        AND server != 'UATRater1'
-        AND status = 'NO RESPONSE';
-        """
+                cursor.execute(query)
+                count = cursor.fetchone()[0]  # Fetch the count result
 
-        cursor.execute(query)
-        count = cursor.fetchone()[0]  # Fetch the count result
-
-        # Determine status and color based on the count
-        if count == 0:
-            health_status = "All systems operational"
-            color = "green"
-        elif count < 5:
-            health_status = f"'NO RESPONSE' entries today: {count} - Monitor systems"
-            color = "orange"
-        else:
-            health_status = f"'NO RESPONSE' entries today: {count} - System issues detected"
-            color = "red"
-
-        cursor.close()
-        conn.close()
+                # Determine status and color based on the count
+                if count == 0:
+                    health_status = "All systems operational"
+                    color = "green"
+                elif count < 5:
+                    health_status = f"'NO RESPONSE' entries today: {count} - Monitor systems"
+                    color = "orange"
+                else:
+                    health_status = f"'NO RESPONSE' entries today: {count} - System issues detected"
+                    color = "red"
     except Exception as e:
         # Handle the exception if the connection to the database fails
         health_status = "Unable to connect to the SQL server - Critical system issue"
@@ -1141,22 +1136,12 @@ def healthCheck():
         # Optionally, you can log the exception message for debugging
         print("Database connection failed:", str(e))
 
-        # Close the cursor and the connection
-        cursor.close()
-        conn.close()
-    finally:
-        # Close the cursor and the connection
-        cursor.close()
-        conn.close()
-
-    #return jsonify({"status": health_status, "color": color})
     messages.append({"status": health_status, "color": color})
-
-    # Add more health checks here
-
 
     # Wrap messages in an object
     return jsonify({"messages": messages})
+
+
 
 
 jawsServers = [
