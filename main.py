@@ -675,64 +675,78 @@ def currentBrokers():
     return jsonify(results)
 
 @app.route('/broker-quick-stats/<broker_pq_clientid>')
-@limiter.limit("30/minute")  # Limit this endpoint to 10 requests per minute
+@limiter.limit("30/minute")  # Limit this endpoint to 30 requests per minute
 def brokerQuickStats(broker_pq_clientid):
     print("brokerQuickStats: " + broker_pq_clientid)
-    conn = psycopg2.connect(
-        host=DB_HOST,
-        database=DB_NAME,
-        user=DB_USER,
-        password=DB_PASS
-    )
-    cursor = conn.cursor()
+    try:
+        # Use context manager for the database connection
+        with psycopg2.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASS
+        ) as conn:
+            # Use context manager for the cursor
+            with conn.cursor() as cursor:
+                # First find the most recent PQ hotfix
+                sql_query = (
+                    "SELECT hotfix_rid "
+                    "FROM hotfix "
+                    "WHERE sw_type = 'PQ' "
+                    "ORDER BY date_created DESC "
+                    "LIMIT 1"
+                )
+                cursor.execute(sql_query)
+                result = cursor.fetchone()
+                if result is None:
+                    # If no hotfix is found, return an error
+                    return jsonify({'error': 'No PQ hotfix found'}), 500
 
-    # First find the most recent pq hotfix
-    sql_query = (
-        "SELECT hotfix_rid "
-        "FROM hotfix "
-        "WHERE sw_type = 'PQ' "
-        "ORDER BY date_created DESC "
-        "LIMIT 1"
-    )
+                current_hotfixrid = result[0]
+                print('Current hotfix rid: ' + str(current_hotfixrid))
 
-    cursor.execute(sql_query)
-    result = cursor.fetchone()
-    print('Current hotfix rid: ' + str(result[0]))
+                # Initialize the base query and parameters
+                sql_query_brokers = (
+                    "SELECT b.brokername, b.pq_clientid, b.prod_id, b.expiry, "
+                    "software_info.hotfix_rid AS hotfix_rid, %s AS current_hotfixrid "
+                    "FROM broker AS b "
+                    "JOIN software_info ON b.pq_clientid = software_info.pq_clientid "
+                )
+                query_params = [current_hotfixrid]
 
-    if broker_pq_clientid != 'None' and broker_pq_clientid != 'undefined':
-        # Find all the brokers that have an expiry date after 1 month ago, return all relevant data
-        sql_query_brokers = (
-            "SELECT b.brokername, b.pq_clientid, b.prod_id, b.expiry, software_info.hotfix_rid as hotfix_rid, %s AS current_hotfixrid  "
-            "FROM broker as b, software_info "
-            "WHERE b.pq_clientid = software_info.pq_clientid "
-        )
-        sql_query_brokers += "AND b.pq_clientid = %s AND b.expiry >= NOW() - INTERVAL '1 month' and b.product_id LIKE '%%PQ%%' "
-        sql_query_brokers += "AND b.testing is FALSE and b.demo is FALSE "
-        sql_query_brokers += "ORDER BY b.brokername ASC"
-        cursor.execute(sql_query_brokers, (result[0], broker_pq_clientid, ))
-    else:
-        # Find all the brokers that have an expiry date after 1 month ago, return all relevant data
-        sql_query_brokers = (
-            "SELECT b.brokername, b.pq_clientid, b.prod_id, b.expiry, software_info.hotfix_rid as hotfix_rid, %s AS current_hotfixrid "
-            "FROM broker as b, software_info "
-            "WHERE b.pq_clientid = software_info.pq_clientid "
-        )
-        sql_query_brokers += "AND b.expiry >= NOW() - INTERVAL '1 month' "
-        sql_query_brokers += "AND %s != hotfix_rid AND b.product_id LIKE '%%PQ%%' "
-        sql_query_brokers += "AND b.testing is FALSE and b.demo is FALSE "
-        sql_query_brokers += "AND b.brokername NOT LIKE '%%PowerSoft%%' "
-        sql_query_brokers += "AND b.brokername NOT LIKE '%%Powersoft%%' "
-        sql_query_brokers += "ORDER BY b.brokername ASC"
-        cursor.execute(sql_query_brokers, (result[0], result[0], ))
+                # Build the query based on broker_pq_clientid
+                if broker_pq_clientid not in ('None', 'undefined'):
+                    sql_query_brokers += (
+                        "WHERE b.pq_clientid = %s "
+                        "AND b.expiry >= NOW() - INTERVAL '1 month' "
+                        "AND b.product_id LIKE '%%PQ%%' "
+                        "AND b.testing IS FALSE AND b.demo IS FALSE "
+                        "ORDER BY b.brokername ASC"
+                    )
+                    query_params.append(broker_pq_clientid)
+                else:
+                    sql_query_brokers += (
+                        "WHERE b.expiry >= NOW() - INTERVAL '1 month' "
+                        "AND software_info.hotfix_rid != %s "
+                        "AND b.product_id LIKE '%%PQ%%' "
+                        "AND b.testing IS FALSE AND b.demo IS FALSE "
+                        "AND b.brokername NOT LIKE '%%PowerSoft%%' "
+                        "ORDER BY b.brokername ASC"
+                    )
+                    query_params.append(current_hotfixrid)
 
-    results = cursor.fetchall()
-    print(results)
+                cursor.execute(sql_query_brokers, query_params)
+                results = cursor.fetchall()
+                print(results)
 
-    # Close the cursor and the connection
-    cursor.close()
-    conn.close()
+        # No need to close the cursor and the connection; they are automatically closed by the context managers
+        return jsonify(results)
 
-    return jsonify(results)
+    except Exception as e:
+        print("Error in brokerQuickStats:", str(e))
+        # Return an error response
+        return jsonify({'error': 'Internal server error'}), 500
+
 
 
 @app.route('/broker-rate-engines/<broker_pq_clientid>')
