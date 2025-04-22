@@ -31,7 +31,8 @@ JAWS_LOGS = config['File Locations']['JAWS_LOGS']
 status_colors = {
     0: 'rgb(200, 200, 200)',
     1: 'rgb(100, 200, 100)',
-    500: 'rgb(100, 100, 100)',
+    500: 'rgb(256, 0, 0)',
+    503: 'rgb(200, 0, 0)',
     504: 'rgb(255, 128, 128)',
     403: 'rgb(255, 128, 0)',
     6: 'rgb(200, 95, 0)',
@@ -45,6 +46,7 @@ status_labels = {
     0: 'Credit',
     1: 'Success',
     500: '500 - Insurer Service Error',
+    503: '503 - Insurer Service Error',
     504: '504 - Timeout',
     403: '403 - Authentication Error',
     6: 'JAWS Validation Error - Creds?',
@@ -847,7 +849,8 @@ def brokerQuoteHistory(broker_pq_clientid):
         " ORDER BY total_requests DESC;"
     )
 
-    cursor.execute(sql_query, (broker_pq_clientid,))  # Pass the parameter as a tuple
+    ##cursor.execute(sql_query, (broker_pq_clientid,))  # Pass the parameter as a tuple
+    cursor.execute(sql_query)
 
     results = cursor.fetchall()
     print(results)
