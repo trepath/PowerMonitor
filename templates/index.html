@@ -133,6 +133,7 @@
 
         .tab-buttons {
             margin-bottom: 10px;
+            display: flex;
         }
 
         .tab-buttons button {
@@ -223,16 +224,22 @@
         .server-status {
             flex: 2;
         }
+
+        .grabben-logs {
+            padding: 5px;
+        }
     </style>
 </head>
 <body>
 <div class="tab-buttons">
-    <button id="request-per-hour-button" onclick="switchTab('request-per-hour')">JAWS Server Stats</button>
-    <button id="company-status-button" onclick="switchTab('company-status')">Company Status</button>
-    <button id="broker-status-button" onclick="switchTab('broker-status')">Broker Stats</button>
-    <!-- New element for displaying health check status -->
-    <span id="health-check-status-container" style="color: red; font-weight: bold;"></span>
-    <!-- <span id="health-check-status-container"></span>-->
+    <div>
+        <button id="request-per-hour-button" onclick="switchTab('request-per-hour')">JAWS Server Stats</button>
+        <button id="company-status-button" onclick="switchTab('company-status')">Company Status</button>
+        <button id="broker-status-button" onclick="switchTab('broker-status')">Broker Stats</button>
+        <!-- New element for displaying health check status -->
+        <span id="health-check-status-container" style="color: red; font-weight: bold;"></span>
+        <!-- <span id="health-check-status-container"></span>-->
+    </div>
 </div>
 <div id="main-frame">
     <div id="request-per-hour" class="tab active">
@@ -334,6 +341,22 @@
                     Plotly.react('bar-graph', parsedData.data, parsedData.layout);
                 });
         }
+
+        // --- NEW: load the quote-log stacked bar into #file-content ---
+        var fileContent = document.getElementById('file-content');
+        fileContent.innerHTML = '';  // clear any previous content
+
+        fetch('/quote-log-last-hour')
+          .then(r => r.json())
+          .then(fig => {
+            // fig.data and fig.layout will be objects, not strings
+            const fileContent = document.getElementById('file-content');
+            fileContent.innerHTML = '';
+            const plotDiv = document.createElement('div');
+            fileContent.appendChild(plotDiv);
+            Plotly.newPlot(plotDiv, fig.data, fig.layout, {displayModeBar: false});
+          });
+
     }
 
     function handleResize() {
@@ -499,6 +522,7 @@
 
         var fileContent = document.getElementById('file-content');
         fileContent.textContent = ''; // Clear the file content
+
     }
 
     function displayFormattedXML(data) {
@@ -1358,6 +1382,7 @@ function createRateEngines(pqClientID, contentContainer) {
         var serverDropdown = document.getElementById('server-dropdown');
         serverDropdown.addEventListener('change', handleServerDropDownChange);
 
+
         // Function to update health check status and color
         function updateHealthCheckStatus() {
             fetch('/health-check')
@@ -1384,6 +1409,7 @@ function createRateEngines(pqClientID, contentContainer) {
                 // Call the fetchServerStatus function to populate the server status on page load
                 fetchServerStatus();
         }
+
 
 
         // Update health check status every 30 seconds

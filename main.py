@@ -359,7 +359,7 @@ def graph_data_last_hour():
     cache['last_hour_graph_data'] = {'timestamp': time.time(), 'data': jsonify(fig.to_json())}
     return cache['last_hour_graph_data']['data']
 
-
+import json
 from datetime import datetime, timedelta
 
 
@@ -706,8 +706,6 @@ def healthCheck():
     return jsonify({"messages": messages})
 
 
-
-
 jawsServers = [
     {'name': '<a href="https://jaws.power-soft.com/balancer">jaws.power-soft.com</a>', 'url': 'https://jaws.power-soft.com/axis2/services/ServiceProvider?wsdl', 'expected_text': 'Grabenwerks Service'},
     {'name': '<a href="http://prodjaws1.servpoint.net/axis2/services/ServiceProvider?wsdl">prodjaws1.servpoint.net</a>', 'url': 'http://prodjaws1.servpoint.net/axis2/services/ServiceProvider?wsdl', 'expected_text': 'Grabenwerks Service'},
@@ -762,6 +760,87 @@ def server_status():
 
 
     return render_template_string(status_html)
+
+# in your status_colors mapping (top of file), add defaults for quote_log:
+quote_status_colors = {
+    'S': 'rgb(100, 200, 100)',
+    'E': 'red',
+    'F': 'pink',
+    'R': 'purple',
+    'N': 'lightblue',
+    'FW': 'black'
+}
+
+legend_map = {
+    'S':  'Success',
+    'E':  'Internal error',
+    'F':  'Request failure',
+    'R':  'RateEngine error',
+    'N':  'No Rates / Missing',
+    'FW': 'Unable to save'
+}
+
+# any other status falls back to grey:
+default_quote_color = 'grey'
+
+import json
+from datetime import datetime, timedelta
+
+@app.route('/quote-log-last-hour')
+@limiter.limit("30 per minute")
+def quote_log_last_hour():
+    try:
+        # 1) Trim inside every clause; don’t refer to the alias in WHERE
+        sql = """
+            SELECT
+              TRIM(type)        AS typ,
+              TRIM(status_code) AS st,
+              COUNT(*)          AS cnt
+            FROM public.quote_log
+            WHERE stamp >= NOW() - INTERVAL '1 hour'
+              AND TRIM(type) IN ('RC','CQ')
+            GROUP BY TRIM(type), TRIM(status_code)
+            ORDER BY typ, st;
+        """
+        with get_db_cursor() as cur:
+            cur.execute(sql)
+            rows = cur.fetchall()
+            app.logger.debug(f"[quote-log-last-hour] rows: {rows}")
+
+        # 2) Pivot
+        data = {'RC': {}, 'CQ': {}}
+        statuses = set()
+        for typ, st, cnt in rows:
+            data[typ][st] = cnt
+            statuses.add(st)
+
+        # 3) Build the stacked bar
+        fig = go.Figure()
+        for st in sorted(statuses):
+            fig.add_trace(go.Bar(
+                y=['RC', 'CQ'],
+                x=[data['RC'].get(st, 0), data['CQ'].get(st, 0)],
+                name=legend_map.get(st, st),  # use expanded label here
+                orientation='h',
+                marker_color=quote_status_colors.get(st, default_quote_color)
+            ))
+
+        fig.update_layout(
+            barmode='stack',
+            title='Rateworks Activity (Last Hour)',
+            xaxis_title='Count',
+            yaxis_title='Type',
+            margin=dict(l=50, r=20, t=50, b=50),
+            height=200        # ← half of a 400px default
+        )
+
+        # 4) Return the figure JSON
+        return jsonify(json.loads(fig.to_json()))
+
+    except Exception:
+        app.logger.exception("Error in quote-log-last-hour")
+        return jsonify({ 'error': 'Failed to build quote-log graph' }), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
