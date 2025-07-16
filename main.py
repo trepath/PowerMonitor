@@ -728,6 +728,7 @@ rateworksServers = [
     {'name': '<a href="http://prodrater2.servpoint.net/rateworks.wsdl">prodrater2.servpoint.net</a>', 'url': 'http://prodrater2.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
     {'name': '<a href="http://prodrater3.servpoint.net/rateworks.wsdl">prodrater3.servpoint.net</a>', 'url': 'http://prodrater3.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
     {'name': '<a href="http://prodrater4.servpoint.net/rateworks.wsdl">prodrater4.servpoint.net</a>', 'url': 'http://prodrater4.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
+    {'name': '<a href="http://prodrater5.servpoint.net/rateworks.wsdl">prodrater5.servpoint.net</a>', 'url': 'http://prodrater5.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
     {'name': '<a href="http://uatraterspool.servpoint.net/balancer">uatraterspool.servpoint.net</a>', 'url': 'http://uatraterspool.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
     {'name': '<a href="http://uatrater1.servpoint.net/rateworks.wsdl">uatrater1.servpoint.net</a>', 'url': 'http://uatrater1.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
     {'name': '<a href="http://uatrater2.servpoint.net/rateworks.wsdl">uatrater2.servpoint.net</a>', 'url': 'http://uatrater2.servpoint.net/rateworks.wsdl', 'expected_text': 'RateWorks'},
@@ -746,7 +747,7 @@ def check_server_status(url, expected_text):
         return 'red'
 
 @app.route('/server-status')
-@limiter.limit("30/minute")
+@limiter.limit("2/minute")
 def server_status():
     status_html = '<br><b>Jaws Servers</b><br>'
     for server in jawsServers:
@@ -761,7 +762,11 @@ def server_status():
 
     return render_template_string(status_html)
 
-# in your status_colors mapping (top of file), add defaults for quote_log:
+import json
+from datetime import timedelta
+import plotly.graph_objects as go
+
+# at the top of your file, your legend and color maps
 quote_status_colors = {
     'S': 'rgb(100, 200, 100)',
     'E': 'red',
@@ -770,7 +775,7 @@ quote_status_colors = {
     'N': 'lightblue',
     'FW': 'black'
 }
-
+default_quote_color = 'grey'
 legend_map = {
     'S':  'Success',
     'E':  'Internal error',
@@ -780,58 +785,55 @@ legend_map = {
     'FW': 'Unable to save'
 }
 
-# any other status falls back to grey:
-default_quote_color = 'grey'
-
-import json
-from datetime import datetime, timedelta
-
 @app.route('/quote-log-last-hour')
 @limiter.limit("30 per minute")
 def quote_log_last_hour():
     try:
-        # 1) Trim inside every clause; don’t refer to the alias in WHERE
+        # 1) Group by type + service mode ("P" vs other) + status_code
         sql = """
             SELECT
-              TRIM(type)        AS typ,
+              TRIM(type) AS typ,
+              CASE WHEN servicemode = 'P' THEN 'Prod' ELSE 'Test' END AS sm,
               TRIM(status_code) AS st,
-              COUNT(*)          AS cnt
+              COUNT(*) AS cnt
             FROM public.quote_log
             WHERE stamp >= NOW() - INTERVAL '1 hour'
               AND TRIM(type) IN ('RC','CQ')
-            GROUP BY TRIM(type), TRIM(status_code)
-            ORDER BY typ, st;
+            GROUP BY typ, sm, st
+            ORDER BY typ, sm, st;
         """
         with get_db_cursor() as cur:
             cur.execute(sql)
             rows = cur.fetchall()
-            app.logger.debug(f"[quote-log-last-hour] rows: {rows}")
+            # rows like: [('CQ','P','S',42), ('CQ','other','S',49), ...]
 
-        # 2) Pivot
-        data = {'RC': {}, 'CQ': {}}
+        # 2) Pivot into a dict keyed by (type,service_mode)
+        keys = [('RC','Prod'), ('RC','Test'), ('CQ','Prod'), ('CQ','Test')]
+        y_labels = [f"{typ} {sm}" for typ, sm in keys]
+        data = {k: {} for k in keys}
         statuses = set()
-        for typ, st, cnt in rows:
-            data[typ][st] = cnt
+        for typ, sm, st, cnt in rows:
+            data[(typ,sm)][st] = cnt
             statuses.add(st)
 
-        # 3) Build the stacked bar
+        # 3) Build a horizontal stacked bar with four bars
         fig = go.Figure()
         for st in sorted(statuses):
             fig.add_trace(go.Bar(
-                y=['RC', 'CQ'],
-                x=[data['RC'].get(st, 0), data['CQ'].get(st, 0)],
-                name=legend_map.get(st, st),  # use expanded label here
+                y = y_labels,
+                x = [data[k].get(st, 0) for k in keys],
+                name = legend_map.get(st, st),
                 orientation='h',
                 marker_color=quote_status_colors.get(st, default_quote_color)
             ))
 
         fig.update_layout(
             barmode='stack',
-            title='Rateworks Activity (Last Hour)',
+            title='Quote Log Activity (Last Hour) by Service Mode',
             xaxis_title='Count',
-            yaxis_title='Type',
-            margin=dict(l=50, r=20, t=50, b=50),
-            height=200        # ← half of a 400px default
+            yaxis_title='Type + Service Mode',
+            margin=dict(l=80, r=20, t=50, b=50),
+            height=300  # adjust as you like
         )
 
         # 4) Return the figure JSON
@@ -840,6 +842,7 @@ def quote_log_last_hour():
     except Exception:
         app.logger.exception("Error in quote-log-last-hour")
         return jsonify({ 'error': 'Failed to build quote-log graph' }), 500
+
 
 
 if __name__ == '__main__':
